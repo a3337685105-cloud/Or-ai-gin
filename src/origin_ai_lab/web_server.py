@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import argparse
+import threading
+import webbrowser
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -356,14 +359,22 @@ class OriginAIWebHandler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
 
-def run(host: str = "127.0.0.1", port: int = 8765) -> None:
+def run(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = False) -> None:
     server = ThreadingHTTPServer((host, port), OriginAIWebHandler)
-    print(f"Origin AI Lab web UI: http://{host}:{port}")
+    url = f"http://{host}:{port}"
+    print(f"Origin AI Lab web UI: {url}")
+    if open_browser:
+        threading.Timer(0.6, lambda: webbrowser.open(url)).start()
     server.serve_forever()
 
 
-def main() -> int:
-    run()
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="origin-ai-web")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--open", action="store_true", help="Open the web UI in the default browser.")
+    args = parser.parse_args(argv)
+    run(host=args.host, port=args.port, open_browser=args.open)
     return 0
 
 

@@ -12,7 +12,7 @@
       <header class="topbar">
         <div class="brand">
           <h1>Origin AI Lab</h1>
-          <p>把科研绘图需求收束成可验证、可复现、可继续修改的执行计划。</p>
+          <p>科研数据进来，Origin 图和可复现检查出去。</p>
         </div>
         <div class="runtime" aria-label="运行状态">
           <span id="aiMode">AI: 检测中</span>
@@ -23,23 +23,45 @@
       <div class="app-grid">
         <section class="main-column" aria-label="主工作区">
           <section class="command-panel" aria-labelledby="commandTitle">
+            <div class="flow-steps" aria-label="工作流进度">
+              <span class="flow-step is-current" data-step="data">1 数据</span>
+              <span class="flow-step" data-step="intent">2 理解</span>
+              <span class="flow-step" data-step="confirm">3 确认</span>
+              <span class="flow-step" data-step="render">4 出图</span>
+            </div>
             <div class="section-heading">
               <div>
                 <h2 id="commandTitle">绘图需求</h2>
-                <p>直接描述图、分析方法和导出要求。</p>
+                <p>选择样例或输入自己的数据路径与绘图要求。</p>
               </div>
-              <span class="workflow-badge">主任务</span>
+              <span class="workflow-badge" id="workflowState">准备就绪</span>
+            </div>
+            <div class="sample-strip" aria-label="样例任务">
+              <button class="sample-chip" type="button" data-dataset="examples/sample_xy.csv" data-request="帮我画 time_s 和 signal_v 的散点图，加线性拟合，导出 png">散点拟合</button>
+              <button class="sample-chip" type="button" data-dataset="examples/materials_xrd_export.csv" data-request="生成 XRD 图谱，横轴 two_theta_deg，纵轴 intensity_counts，导出 png">XRD 图谱</button>
+              <button class="sample-chip" type="button" data-dataset="examples/materials_raman_export.txt" data-request="把 Raman_shift_cm-1 作为横轴，Intensity_a.u. 作为纵轴画拉曼光谱曲线，导出 svg">Raman 曲线</button>
+              <button class="sample-chip" type="button" data-dataset="examples/materials_eis_export.csv" data-request="画 z_real_ohm 和 z_imag_neg_ohm 的 Nyquist 散点图，导出 png">Nyquist</button>
+            </div>
+            <div class="run-fields">
+              <label class="path-field" for="datasetPath">
+                数据文件
+                <input id="datasetPath" value="examples/sample_xy.csv" />
+              </label>
+              <label class="toggle-field origin-toggle" for="useOrigin">
+                <input id="useOrigin" type="checkbox" />
+                调用 Origin
+              </label>
             </div>
             <label for="requestText">你想让 AI 画什么？</label>
             <textarea id="requestText" rows="4">帮我画散点图，加线性拟合，导出 png</textarea>
             <div class="primary-actions">
               <button id="intakeButton" class="secondary" type="button">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7" /><path d="M16 14l2 2 4-5" /></svg>
-                理解需求
+                理解并填槽
               </button>
               <button id="runButton" type="button">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
-                执行生成
+                生成图与报告
               </button>
             </div>
           </section>
@@ -50,7 +72,10 @@
               <span id="runState">未执行</span>
             </div>
             <div class="preview-frame" id="previewFrame">
-              <p>执行后这里会显示图预览。</p>
+              <div class="empty-preview">
+                <strong>等待生成</strong>
+                <span>先用样例跑通，再换成自己的文件。</span>
+              </div>
             </div>
             <div id="resultSummary" class="result-summary"></div>
             <div id="artifactList" class="artifact-list"></div>
@@ -118,16 +143,10 @@
         <aside class="utility-rail" aria-label="设置与上下文">
           <section class="rail-card context-card">
             <div class="rail-heading">
-              <h2>当前上下文</h2>
+              <h2>本机启动</h2>
             </div>
-            <label class="path-field" for="datasetPath">
-              数据文件
-              <input id="datasetPath" value="examples/sample_xy.csv" />
-            </label>
-            <label class="toggle-field" for="useOrigin">
-              <input id="useOrigin" type="checkbox" />
-              调用 Origin 生成 OPJU/PNG
-            </label>
+            <code>.\scripts\setup_windows.ps1</code>
+            <code>.\scripts\start_web.ps1</code>
           </section>
 
           <details class="rail-card key-panel">

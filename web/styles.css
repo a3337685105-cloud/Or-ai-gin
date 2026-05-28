@@ -116,6 +116,40 @@ summary {
   border-color: #c8ddd8;
 }
 
+.flow-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.flow-step {
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f7faf9;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.flow-step.is-done {
+  border-color: #b9d7cf;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.flow-step.is-current {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
 .section-heading,
 .panel-heading,
 .rail-heading {
@@ -127,6 +161,43 @@ summary {
 
 .section-heading {
   margin-bottom: 12px;
+}
+
+.sample-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.sample-chip {
+  min-height: 32px;
+  border: 1px solid #d7e1dd;
+  background: #f5f8f7;
+  color: #244740;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.sample-chip:hover {
+  background: #eaf3f0;
+}
+
+.run-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.origin-toggle {
+  min-width: 118px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfcfd;
+  padding: 0 10px;
 }
 
 .section-heading h2,
@@ -281,6 +352,19 @@ summary svg {
   overflow: hidden;
   color: var(--muted);
   font-size: 13px;
+}
+
+.empty-preview {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+  color: var(--muted);
+  padding: 24px;
+}
+
+.empty-preview strong {
+  color: var(--ink);
+  font-size: 16px;
 }
 
 .preview-frame svg {
@@ -550,7 +634,19 @@ summary svg {
 
 .context-card {
   display: grid;
-  gap: 12px;
+  gap: 10px;
+}
+
+.context-card code {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f7faf9;
+  color: #244740;
+  padding: 9px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .rail-heading {
@@ -711,6 +807,11 @@ details[open] summary svg {
   .settings-actions {
     grid-template-columns: 1fr;
     display: grid;
+  }
+
+  .flow-steps,
+  .run-fields {
+    grid-template-columns: 1fr;
   }
 
   .primary-actions button,

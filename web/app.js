@@ -46,6 +46,9 @@ const feedbackText = document.querySelector("#feedbackText");
 const correctionText = document.querySelector("#correctionText");
 const feedbackButton = document.querySelector("#feedbackButton");
 const feedbackState = document.querySelector("#feedbackState");
+const workflowState = document.querySelector("#workflowState");
+const flowSteps = Array.from(document.querySelectorAll("[data-step]"));
+const sampleButtons = Array.from(document.querySelectorAll(".sample-chip"));
 
 async function postJson(url, payload) {
   const response = await fetch(url, {
@@ -122,10 +125,7 @@ function renderQwenStatus(status) {
   qwenThinking.checked = Boolean(status.enable_thinking);
   qwenKeyState.textContent = status.configured
     ? `已配置：${status.model}`
-    : "未配置";
-  if (!status.configured && qwenSettings) {
-    qwenSettings.open = true;
-  }
+    : "未配置，可用规则模式";
 }
 
 function setBusy(button, busy) {
@@ -137,6 +137,9 @@ function renderProfile(profile) {
     profileSummary.innerHTML = `<div class="empty">暂无数据概况。</div>`;
     dataState.textContent = "等待解析";
     return;
+  }
+  if (!state.intent && !state.result) {
+    setWorkflowStage("data", "数据已读取");
   }
   dataState.textContent = `${profile.row_count} 行`;
   const columns = profile.columns
@@ -162,6 +165,7 @@ function renderIntent(intent) {
   }
 
   intentState.textContent = intent.ready_to_execute ? "可执行" : "需确认";
+  setWorkflowStage(intent.ready_to_execute ? "confirm" : "intent", intent.ready_to_execute ? "等待生成" : "需要确认");
   const outputFormats = intent.output_formats.length ? intent.output_formats.join(", ") : "png";
   slotGrid.innerHTML = `
     <div class="slot readonly-slot"><span>意图</span><strong>${escapeHtml(intent.kind)}</strong></div>
@@ -184,18 +188,18 @@ function renderIntent(intent) {
     </div>
     <div class="slot editable-slot">
       <label for="slotTitle">图标题</label>
-      <input id="slotTitle" value="${escapeAttr(defaultTitle(intent))}" />
+      <input id="slotTitle" placeholder="${escapeAttr(defaultTitle(intent))}" />
     </div>
     <div class="slot editable-slot">
       <label for="slotXTitle">横轴标题</label>
-      <input id="slotXTitle" value="${escapeAttr(intent.x_column || "")}" />
+      <input id="slotXTitle" placeholder="${escapeAttr(intent.x_column || "")}" />
     </div>
     <div class="slot editable-slot">
       <label for="slotYTitle">纵轴标题</label>
-      <input id="slotYTitle" value="${escapeAttr(intent.y_column || "")}" />
+      <input id="slotYTitle" placeholder="${escapeAttr(intent.y_column || "")}" />
     </div>
     <label class="slot toggle-slot" for="slotFitEnabled">
-      <input id="slotFitEnabled" type="checkbox" ${defaultFitEnabled() ? "checked" : ""} />
+      <input id="slotFitEnabled" type="checkbox" ${defaultFitEnabled(intent) ? "checked" : ""} />
       线性拟合
     </label>
     <div class="slot editable-slot wide-slot">
@@ -230,6 +234,7 @@ function renderResult(data) {
   state.manifest = data.manifest || state.manifest;
   state.plotSpec = data.plot_spec || state.plotSpec;
   runState.textContent = result.passed ? "检查通过" : "有问题";
+  setWorkflowStage("render", result.passed ? "已生成" : "需处理");
 
   if (data.artifact_urls && data.artifact_urls.origin_figure) {
     previewFrame.innerHTML = `<img src="${data.artifact_urls.origin_figure}" alt="Origin 导出的图" />`;
@@ -358,6 +363,7 @@ function renderSvgPlot(points, regression) {
 async function handleIntake() {
   setBusy(intakeButton, true);
   intentState.textContent = "解析中";
+  setWorkflowStage("intent", "理解中");
   try {
     const data = await postJson("/api/intake", {
       request: requestText.value,
@@ -369,6 +375,7 @@ async function handleIntake() {
     renderIntent(data.intent);
   } catch (error) {
     intentState.textContent = "失败";
+    setWorkflowStage("intent", "需要处理");
     questions.innerHTML = `<div class="notice warning">${escapeHtml(error.message)}</div>`;
   } finally {
     setBusy(intakeButton, false);
@@ -378,6 +385,7 @@ async function handleIntake() {
 async function handleRun() {
   setBusy(runButton, true);
   runState.textContent = "执行中";
+  setWorkflowStage("render", "生成中");
   try {
     const data = await postJson("/api/analyze", {
       request: requestText.value,
@@ -392,9 +400,48 @@ async function handleRun() {
     renderResult(data);
   } catch (error) {
     runState.textContent = "失败";
+    setWorkflowStage("confirm", "需要处理");
     previewFrame.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
   } finally {
     setBusy(runButton, false);
+  }
+}
+
+async function applySample(button) {
+  requestText.value = button.dataset.request || requestText.value;
+  datasetPath.value = button.dataset.dataset || datasetPath.value;
+  state.profile = null;
+  state.intent = null;
+  state.result = null;
+  state.runId = null;
+  state.revision = null;
+  state.manifest = null;
+  state.plotSpec = null;
+  runState.textContent = "未执行";
+  resultSummary.innerHTML = "";
+  artifactList.innerHTML = "";
+  modifyPanel.hidden = true;
+  feedbackPanel.hidden = true;
+  previewFrame.innerHTML = `
+    <div class="empty-preview">
+      <strong>样例已载入</strong>
+      <span>确认槽位后生成图与报告。</span>
+    </div>
+  `;
+  setWorkflowStage("intent", "样例已载入");
+  await handleIntake();
+}
+
+function setWorkflowStage(stage, label) {
+  const order = ["data", "intent", "confirm", "render"];
+  const currentIndex = Math.max(order.indexOf(stage), 0);
+  flowSteps.forEach((item) => {
+    const index = order.indexOf(item.dataset.step);
+    item.classList.toggle("is-done", index >= 0 && index < currentIndex);
+    item.classList.toggle("is-current", index === currentIndex);
+  });
+  if (workflowState) {
+    workflowState.textContent = label;
   }
 }
 
@@ -550,9 +597,17 @@ function defaultTitle(intent) {
   return "";
 }
 
-function defaultFitEnabled() {
+function defaultFitEnabled(intent) {
   const text = requestText.value.toLowerCase();
-  return !["不要拟合", "不需要拟合", "去掉拟合", "删除拟合", "不用拟合", "no fit", "without fit"].some((item) => text.includes(item));
+  const negative = ["不要拟合", "不需要拟合", "去掉拟合", "删除拟合", "不用拟合", "no fit", "without fit"];
+  if (negative.some((item) => text.includes(item))) {
+    return false;
+  }
+  const positive = ["线性拟合", "加拟合", "拟合线", "回归", "fit", "regression", "trend line"];
+  if (positive.some((item) => text.includes(item))) {
+    return true;
+  }
+  return intent && intent.plot_kind === "scatter" && text.includes("散点");
 }
 
 function escapeHtml(value) {
@@ -570,6 +625,13 @@ function escapeAttr(value) {
 
 intakeButton.addEventListener("click", handleIntake);
 runButton.addEventListener("click", handleRun);
+sampleButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    applySample(button);
+  });
+});
+requestText.addEventListener("input", () => setWorkflowStage("data", "已编辑"));
+datasetPath.addEventListener("input", () => setWorkflowStage("data", "已编辑"));
 saveQwenKeyButton.addEventListener("click", saveQwenKey);
 deleteQwenKeyButton.addEventListener("click", deleteQwenKey);
 modifyButton.addEventListener("click", handleModify);

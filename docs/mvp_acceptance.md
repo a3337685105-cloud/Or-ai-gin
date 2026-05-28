@@ -6,6 +6,7 @@
 
 - 仓库包含可运行的 `pyproject.toml`、CLI、Web UI、测试、示例数据和项目说明。
 - `python -m pip install -e .` 可以成功安装开发包。
+- Windows 新用户可以通过 `.\scripts\setup_windows.ps1` 完成基础安装，并通过 `.\scripts\start_web.ps1` 启动页面。
 - 如果 Windows 用户 Scripts 目录不在 `PATH`，验证命令应使用 `python -m origin_ai_lab.cli` 作为稳定入口。
 - `runs/`、私有数据、Origin 项目导出、缓存和密钥不得进入提交。
 

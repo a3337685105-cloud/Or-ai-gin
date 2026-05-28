@@ -17,7 +17,31 @@ The product direction is deliberately conservative: the AI should plan and expla
 - First workflow: CSV profile + XY regression + plot specification, with optional Origin export hook.
 - First web UI: `web/index.html`, served by `src/origin_ai_lab/web_server.py`
 
-## Quick Start
+## Easiest Start
+
+For Windows local use:
+
+```powershell
+.\scripts\setup_windows.ps1
+.\scripts\start_web.ps1
+```
+
+If PowerShell blocks local scripts, run the same setup with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup_windows.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\start_web.ps1
+```
+
+The web UI opens at:
+
+```text
+http://127.0.0.1:8765
+```
+
+No cloud key is required for the rule-based planner. In the web UI, use the "模型与密钥" panel only when you want Qwen planning.
+
+## Developer Commands
 
 ```powershell
 python -m pip install -e .
@@ -42,7 +66,7 @@ Then open:
 http://127.0.0.1:8765
 ```
 
-In the web UI, use the "千问设置" panel to save a DashScope key locally. The key is encrypted with Windows DPAPI and is not stored in the repository.
+In the web UI, use the "模型与密钥" panel to save a DashScope key locally. The key is encrypted with Windows DPAPI and is not stored in the repository.
 
 For a real Origin smoke test on this machine, use the dedicated Origin environment:
 
