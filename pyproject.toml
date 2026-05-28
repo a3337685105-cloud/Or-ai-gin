@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "origin-ai-lab"
+version = "0.1.0"
+description = "AI-assisted scientific analysis and Origin/OriginPro automation scaffold."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Origin AI Lab" }
+]
+dependencies = []
+
+[project.optional-dependencies]
+science = [
+  "numpy>=1.26",
+  "pandas>=2.2",
+  "scipy>=1.12",
+  "statsmodels>=0.14"
+]
+origin = [
+  "originpro>=1.1.15; platform_system == 'Windows'"
+]
+ai = [
+  "openai>=1.0"
+]
+visual = [
+  "pillow>=10.0"
+]
+dev = [
+  "pytest>=8.0"
+]
+
+[project.scripts]
+origin-ai = "origin_ai_lab.cli:main"
+origin-ai-web = "origin_ai_lab.web_server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,22 @@
+Test Method,ASTM-like tensile fixture
+Machine,universal testing machine
+Specimen,synthetic aluminum coupon
+Width_mm,6.0
+Thickness_mm,1.0
+[Data]
+strain_percent,stress_MPa
+0.00,0.0
+0.05,35.0
+0.10,70.5
+0.15,104.8
+0.20,139.2
+0.25,172.1
+0.30,196.5
+0.40,220.4
+0.60,242.8
+0.80,257.3
+1.00,266.0
+1.50,284.5
+2.00,296.2
+3.00,309.6
+4.00,316.1

@@ -1,0 +1,73 @@
+[
+  {
+    "id": "series_red",
+    "dataset": "examples/sample_xy.csv",
+    "request": "把点改成红色",
+    "expected": {
+      "ready_to_execute": true,
+      "style.series.color": "red"
+    }
+  },
+  {
+    "id": "remove_fit",
+    "dataset": "examples/sample_xy.csv",
+    "request": "去掉拟合线",
+    "expected": {
+      "ready_to_execute": true,
+      "fit_enabled": false
+    }
+  },
+  {
+    "id": "export_svg",
+    "dataset": "examples/sample_xy.csv",
+    "request": "导出 svg",
+    "expected": {
+      "ready_to_execute": true,
+      "output_formats": ["svg"]
+    }
+  },
+  {
+    "id": "x_axis_limits",
+    "dataset": "examples/sample_xy.csv",
+    "request": "横坐标从 0 到 10",
+    "expected": {
+      "ready_to_execute": true,
+      "x_limits": [0.0, 10.0]
+    }
+  },
+  {
+    "id": "title_change",
+    "dataset": "examples/sample_xy.csv",
+    "request": "标题改成 Calibration curve",
+    "expected": {
+      "ready_to_execute": true,
+      "title": "Calibration curve"
+    }
+  },
+  {
+    "id": "line_kind",
+    "dataset": "examples/sample_xy.csv",
+    "request": "改成折线图",
+    "expected": {
+      "ready_to_execute": true,
+      "plot_kind": "line"
+    }
+  },
+  {
+    "id": "fit_line_thicker",
+    "dataset": "examples/sample_xy.csv",
+    "request": "把拟合线加粗一点",
+    "expected": {
+      "ready_to_execute": true,
+      "style.fit_line.line_width": 3
+    }
+  },
+  {
+    "id": "vague_aesthetic",
+    "dataset": "examples/sample_xy.csv",
+    "request": "让它更像论文图",
+    "expected": {
+      "ready_to_execute": false
+    }
+  }
+]

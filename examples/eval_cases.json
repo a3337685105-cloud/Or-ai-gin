@@ -1,0 +1,367 @@
+[
+  {
+    "id": "vega_scatter_regression_like",
+    "source": "Vega-Lite example family: scatter plot with regression trend line",
+    "dataset": "examples/sample_xy.csv",
+    "request": "帮我画 time_s 和 signal_v 的散点图，加线性拟合，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "scatter",
+      "task_type": "plot_xy",
+      "x_column": "time_s",
+      "y_column": "signal_v",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "line_echem_curve",
+    "source": "Scientific XY curve workflow inspired by electrochemistry plotting tasks",
+    "dataset": "examples/eval_echem.csv",
+    "request": "把 voltage 作为横轴，current 作为纵轴，画折线图，导出 svg",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "line",
+      "task_type": "plot_xy",
+      "x_column": "voltage",
+      "y_column": "current",
+      "output_formats": ["svg"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "bar_category_value",
+    "source": "Vega-Lite example family: simple bar chart",
+    "dataset": "examples/eval_categories.csv",
+    "request": "画 category 和 value 的柱状图，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "bar",
+      "task_type": "plot_xy",
+      "x_column": "category",
+      "y_column": "value",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "histogram_value",
+    "source": "Vega-Lite example family: histogram",
+    "dataset": "examples/eval_histogram.csv",
+    "request": "对 value 画直方图，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "histogram",
+      "task_type": "plot_xy",
+      "x_column": null,
+      "y_column": "value",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "clarify_multi_numeric",
+    "source": "Natural-language visualization benchmark ambiguity pattern: many numeric columns",
+    "dataset": "examples/eval_many_numeric.csv",
+    "request": "帮我画散点图，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "scatter",
+      "task_type": "plot_xy",
+      "x_column": null,
+      "y_column": null,
+      "output_formats": ["png"],
+      "ready_to_execute": false,
+      "clarifying_fields": ["x_column", "y_column"]
+    }
+  },
+  {
+    "id": "line_default_two_numeric",
+    "source": "Vega-Lite line chart family with omitted axes",
+    "dataset": "examples/sample_xy.csv",
+    "request": "画一个折线图，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "line",
+      "task_type": "plot_xy",
+      "x_column": "time_s",
+      "y_column": "signal_v",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "english_scatter_svg",
+    "source": "NL2VIS English request pattern",
+    "dataset": "examples/sample_xy.csv",
+    "request": "Create a scatter plot of signal_v versus time_s and export it as svg.",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "scatter",
+      "task_type": "plot_xy",
+      "x_column": "time_s",
+      "y_column": "signal_v",
+      "output_formats": ["svg"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "blue_scatter_pdf_opju",
+    "source": "Style-and-export user request pattern",
+    "dataset": "examples/sample_xy.csv",
+    "request": "画 signal_v 随 time_s 变化的蓝色散点图，导出 pdf 和 origin 项目",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "scatter",
+      "task_type": "plot_xy",
+      "x_column": "time_s",
+      "y_column": "signal_v",
+      "style": {"color": "blue"},
+      "output_formats": ["pdf", "opju"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "grouped_scatter_color",
+    "source": "Vega-Lite scatter plot with color encoding family",
+    "dataset": "examples/eval_groups.csv",
+    "request": "画 time_s 和 signal_v 的散点图，按 treatment 分颜色，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "scatter",
+      "task_type": "plot_xy",
+      "x_column": "time_s",
+      "y_column": "signal_v",
+      "group_column": "treatment",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "multi_series_line",
+    "source": "Vega-Lite multi-series line chart family",
+    "dataset": "examples/eval_groups.csv",
+    "request": "把 time_s 作为横轴、signal_v 作为纵轴，按 treatment 分组画多条折线，导出 svg",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "line",
+      "task_type": "plot_xy",
+      "x_column": "time_s",
+      "y_column": "signal_v",
+      "group_column": "treatment",
+      "output_formats": ["svg"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "grouped_bar_condition",
+    "source": "Vega-Lite grouped bar chart family",
+    "dataset": "examples/eval_grouped_bar.csv",
+    "request": "按 condition 分组画 category 和 value 的分组柱状图，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "bar",
+      "task_type": "plot_xy",
+      "x_column": "category",
+      "y_column": "value",
+      "group_column": "condition",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "invalid_column_clarify",
+    "source": "Natural-language visualization benchmark invalid-field pattern",
+    "dataset": "examples/sample_xy.csv",
+    "request": "把 foo 作为横轴，bar 作为纵轴画散点图，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "scatter",
+      "task_type": "plot_xy",
+      "x_column": null,
+      "y_column": null,
+      "output_formats": ["png"],
+      "ready_to_execute": false
+    }
+  },
+  {
+    "id": "histogram_default_single_numeric",
+    "source": "Vega-Lite histogram with implied field",
+    "dataset": "examples/eval_histogram.csv",
+    "request": "画直方图，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "histogram",
+      "task_type": "plot_xy",
+      "x_column": null,
+      "y_column": "value",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "curve_signal_over_time",
+    "source": "Scientific curve phrasing: y changes with x",
+    "dataset": "examples/sample_xy.csv",
+    "request": "画 signal_v 随 time_s 变化的曲线图，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "line",
+      "task_type": "plot_xy",
+      "x_column": "time_s",
+      "y_column": "signal_v",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "bar_english_by",
+    "source": "NL2VIS English bar request pattern",
+    "dataset": "examples/eval_categories.csv",
+    "request": "Show value by category as a bar chart and export png.",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "bar",
+      "task_type": "plot_xy",
+      "x_column": "category",
+      "y_column": "value",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "scatter_no_fit",
+    "source": "User explicitly disables fitting",
+    "dataset": "examples/sample_xy.csv",
+    "request": "画 time_s 和 signal_v 的散点图，不要拟合，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "scatter",
+      "task_type": "plot_xy",
+      "x_column": "time_s",
+      "y_column": "signal_v",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "materials_xrd_spectrum",
+    "source": "Materials XRD pattern workflow; inspired by public diffraction pattern conventions such as pymatgen/Materials Project XRD examples.",
+    "dataset": "examples/materials_xrd_export.csv",
+    "request": "生成 XRD 图谱，横轴 two_theta_deg，纵轴 intensity_counts，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "line",
+      "task_type": "plot_xy",
+      "x_column": "two_theta_deg",
+      "y_column": "intensity_counts",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "materials_raman_spectrum",
+    "source": "Raman spectrum workflow; inspired by public mineral spectrum databases such as RRUFF.",
+    "dataset": "examples/materials_raman_export.txt",
+    "request": "把 Raman_shift_cm-1 作为横轴，Intensity_a.u. 作为纵轴画拉曼光谱曲线，导出 svg",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "line",
+      "task_type": "plot_xy",
+      "x_column": "Raman_shift_cm-1",
+      "y_column": "Intensity_a.u.",
+      "output_formats": ["svg"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "materials_tga_curve",
+    "source": "TGA instrument-export pattern: temperature versus mass percent, with derivative column retained as auxiliary data.",
+    "dataset": "examples/materials_tga_export.csv",
+    "request": "画 TGA 热重曲线，temperature_C 做横轴，mass_percent 做纵轴，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "line",
+      "task_type": "plot_xy",
+      "x_column": "temperature_C",
+      "y_column": "mass_percent",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "materials_dsc_curve",
+    "source": "DSC instrument-export pattern: temperature versus heat flow.",
+    "dataset": "examples/materials_dsc_export.tsv",
+    "request": "用 temperature_C 和 heat_flow_mW 画 DSC 热流曲线，导出 svg",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "line",
+      "task_type": "plot_xy",
+      "x_column": "temperature_C",
+      "y_column": "heat_flow_mW",
+      "output_formats": ["svg"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "materials_battery_charge_curve",
+    "source": "Battery charge-discharge workflow; inspired by NASA PCoE battery datasets and common cycler exports.",
+    "dataset": "examples/materials_battery_charge_export.csv",
+    "request": "画 capacity_mAh_g 和 voltage_V 的充放电曲线，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "line",
+      "task_type": "plot_xy",
+      "x_column": "capacity_mAh_g",
+      "y_column": "voltage_V",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "materials_eis_nyquist",
+    "source": "Electrochemical impedance workflow; Nyquist plots commonly use real impedance versus negative imaginary impedance.",
+    "dataset": "examples/materials_eis_export.csv",
+    "request": "画 z_real_ohm 和 z_imag_neg_ohm 的 Nyquist 散点图，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "scatter",
+      "task_type": "plot_xy",
+      "x_column": "z_real_ohm",
+      "y_column": "z_imag_neg_ohm",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "materials_stress_strain_curve",
+    "source": "Tensile testing export workflow: strain versus stress curve.",
+    "dataset": "examples/materials_stress_strain_export.csv",
+    "request": "画 strain_percent 和 stress_MPa 的应力应变曲线，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "line",
+      "task_type": "plot_xy",
+      "x_column": "strain_percent",
+      "y_column": "stress_MPa",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "materials_particle_histogram",
+    "source": "Materials microscopy measurement workflow: particle size distribution from measured diameters.",
+    "dataset": "examples/materials_particle_size_export.csv",
+    "request": "对 particle_diameter_nm 画粒径分布直方图，导出 png",
+    "expected": {
+      "kind": "create_plot",
+      "plot_kind": "histogram",
+      "task_type": "plot_xy",
+      "x_column": null,
+      "y_column": "particle_diameter_nm",
+      "output_formats": ["png"],
+      "ready_to_execute": true
+    }
+  }
+]

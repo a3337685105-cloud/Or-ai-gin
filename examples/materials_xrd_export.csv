@@ -1,0 +1,30 @@
+# Instrument: benchtop XRD
+# Scan axis: 2Theta-Omega
+# Sample: anatase-like thin film, synthetic fixture
+# Export note: representative two-column instrument export with metadata preamble
+[Data]
+two_theta_deg,intensity_counts
+20.0,118
+22.5,124
+25.3,1380
+27.5,162
+30.0,148
+32.5,171
+37.8,910
+40.0,232
+42.5,196
+45.0,208
+48.0,760
+50.0,246
+53.9,510
+55.1,488
+57.5,302
+60.0,254
+62.7,650
+65.0,318
+67.5,282
+70.0,248
+72.5,226
+75.0,216
+77.5,198
+80.0,186

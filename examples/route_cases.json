@@ -1,0 +1,106 @@
+[
+  {
+    "id": "route_xrd_default",
+    "dataset": "examples/materials_xrd_export.csv",
+    "request": "生成 XRD 图谱",
+    "expected": {
+      "route": "normalize_table",
+      "instrument_family": "xrd",
+      "plot_kind": "line",
+      "x_column": "two_theta_deg",
+      "y_column": "intensity_counts",
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "route_raman_default",
+    "dataset": "examples/materials_raman_export.txt",
+    "request": "画拉曼光谱",
+    "expected": {
+      "route": "normalize_table",
+      "instrument_family": "raman",
+      "plot_kind": "line",
+      "x_column": "Raman_shift_cm-1",
+      "y_column": "Intensity_a.u.",
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "route_tga_default",
+    "dataset": "examples/materials_tga_export.csv",
+    "request": "画 TGA 热重曲线",
+    "expected": {
+      "route": "normalize_table",
+      "instrument_family": "tga",
+      "plot_kind": "line",
+      "x_column": "temperature_C",
+      "y_column": "mass_percent",
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "route_dsc_default",
+    "dataset": "examples/materials_dsc_export.tsv",
+    "request": "画 DSC 热流曲线",
+    "expected": {
+      "route": "normalize_table",
+      "instrument_family": "dsc",
+      "plot_kind": "line",
+      "x_column": "temperature_C",
+      "y_column": "heat_flow_mW",
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "route_battery_curve",
+    "dataset": "examples/materials_battery_charge_export.csv",
+    "request": "画充放电曲线",
+    "expected": {
+      "route": "normalize_table",
+      "instrument_family": "battery",
+      "plot_kind": "line",
+      "x_column": "capacity_mAh_g",
+      "y_column": "voltage_V",
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "route_eis_nyquist",
+    "dataset": "examples/materials_eis_export.csv",
+    "request": "画 Nyquist 图",
+    "expected": {
+      "route": "normalize_table",
+      "instrument_family": "eis",
+      "plot_kind": "scatter",
+      "x_column": "z_real_ohm",
+      "y_column": "z_imag_neg_ohm",
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "route_stress_strain",
+    "dataset": "examples/materials_stress_strain_export.csv",
+    "request": "画应力应变曲线",
+    "expected": {
+      "route": "normalize_table",
+      "instrument_family": "stress_strain",
+      "plot_kind": "line",
+      "x_column": "strain_percent",
+      "y_column": "stress_MPa",
+      "ready_to_execute": true
+    }
+  },
+  {
+    "id": "route_particle_histogram",
+    "dataset": "examples/materials_particle_size_export.csv",
+    "request": "画粒径分布直方图",
+    "expected": {
+      "route": "normalize_table",
+      "instrument_family": "particle_size",
+      "plot_kind": "histogram",
+      "x_column": null,
+      "y_column": "particle_diameter_nm",
+      "ready_to_execute": true
+    }
+  }
+]

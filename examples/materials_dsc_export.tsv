@@ -1,0 +1,17 @@
+# Instrument: DSC
+# Sample: polymer blend, synthetic fixture
+# Direction: heating
+temperature_C	heat_flow_mW
+-50	-0.18
+-25	-0.16
+0	-0.14
+25	-0.12
+50	-0.06
+75	0.02
+100	0.16
+125	0.38
+150	0.82
+175	1.42
+200	0.74
+225	0.28
+250	0.10

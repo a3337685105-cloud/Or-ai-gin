@@ -1,0 +1,19 @@
+Experiment: EIS
+Instrument: potentiostat
+Frequency range: 100 kHz to 0.1 Hz
+Sample: synthetic fixture
+[Data]
+frequency_Hz,z_real_ohm,z_imag_neg_ohm
+100000,4.8,0.4
+31623,5.2,1.1
+10000,6.8,2.7
+3162,9.5,5.9
+1000,14.2,9.4
+316,21.8,12.2
+100,31.5,11.4
+31.6,39.2,8.6
+10,44.7,5.2
+3.16,48.8,3.4
+1,53.5,2.5
+0.316,60.8,2.0
+0.1,71.4,1.8

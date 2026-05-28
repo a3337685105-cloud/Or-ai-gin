@@ -1,0 +1,21 @@
+# Instrument: Raman microscope
+# Laser_nm: 532
+# Grating: 1800 lines/mm
+# Sample: anatase-like powder, synthetic fixture
+# The data table below mimics whitespace-delimited spectrometer export.
+Raman_shift_cm-1 Intensity_a.u.
+100 142
+120 198
+144 1480
+160 420
+197 760
+250 305
+320 260
+399 940
+450 388
+513 715
+560 410
+639 1280
+700 330
+760 248
+820 210

@@ -1,0 +1,15 @@
+# Instrument: particle-size analyzer
+# Source: synthetic SEM measurement fixture
+# Unit: nm
+particle_diameter_nm,count
+18,1
+22,2
+25,3
+27,5
+31,7
+35,9
+39,8
+42,6
+48,4
+55,2
+63,1

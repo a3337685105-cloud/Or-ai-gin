@@ -1,0 +1,7 @@
+category,condition,value
+A,control,1.1
+B,control,2.0
+C,control,2.6
+A,treated,1.5
+B,treated,2.7
+C,treated,3.3

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "mode": "warn",
+  "max_changed_lines_warning": 1200,
+  "forbidden_paths": [
+    ".env",
+    ".env.local",
+    ".env.production",
+    "secrets/",
+    "private/",
+    "credentials/",
+    "data/raw/",
+    "runs/private/"
+  ],
+  "require_confirmation_paths": [
+    ".github/workflows/",
+    ".gitignore",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "requirements.txt",
+    "pyproject.toml",
+    "Dockerfile",
+    "docker-compose.yml",
+    "infra/",
+    "terraform/",
+    "migrations/"
+  ],
+  "secret_patterns": [
+    "-----BEGIN [A-Z ]*PRIVATE KEY-----",
+    "sk-[A-Za-z0-9_-]{20,}",
+    "(api[_-]?key|secret|password|token)\\s*[:=]\\s*[\\\"']?(?:sk-[A-Za-z0-9_-]{20,}|[A-Za-z0-9_+=/-]{32,})"
+  ],
+  "secret_scan_exclude_paths": [
+    ".codex/harness-policy.json"
+  ],
+  "required_checks": [
+    "python -m unittest discover -s tests",
+    "python scripts\\check_guardrails.py --policy .codex\\harness-policy.json"
+  ]
+}

@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Origin AI Lab</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <h1>Origin AI Lab</h1>
+          <p>把科研绘图需求收束成可验证、可复现、可继续修改的执行计划。</p>
+        </div>
+        <div class="runtime" aria-label="运行状态">
+          <span id="aiMode">AI: 检测中</span>
+          <span id="originMode">Origin: 检测中</span>
+        </div>
+      </header>
+
+      <div class="app-grid">
+        <section class="main-column" aria-label="主工作区">
+          <section class="command-panel" aria-labelledby="commandTitle">
+            <div class="section-heading">
+              <div>
+                <h2 id="commandTitle">绘图需求</h2>
+                <p>直接描述图、分析方法和导出要求。</p>
+              </div>
+              <span class="workflow-badge">主任务</span>
+            </div>
+            <label for="requestText">你想让 AI 画什么？</label>
+            <textarea id="requestText" rows="4">帮我画散点图，加线性拟合，导出 png</textarea>
+            <div class="primary-actions">
+              <button id="intakeButton" class="secondary" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7" /><path d="M16 14l2 2 4-5" /></svg>
+                理解需求
+              </button>
+              <button id="runButton" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+                执行生成
+              </button>
+            </div>
+          </section>
+
+          <section class="panel result-panel" aria-label="执行结果">
+            <div class="panel-heading">
+              <h2>结果预览</h2>
+              <span id="runState">未执行</span>
+            </div>
+            <div class="preview-frame" id="previewFrame">
+              <p>执行后这里会显示图预览。</p>
+            </div>
+            <div id="resultSummary" class="result-summary"></div>
+            <div id="artifactList" class="artifact-list"></div>
+            <section id="feedbackPanel" class="feedback-panel" hidden>
+              <div class="modify-heading">
+                <div>
+                  <h3>结果反馈</h3>
+                  <p>如果这张图不对，把问题和正确方向记下来，系统会保留成后续评测样本。</p>
+                </div>
+              </div>
+              <label for="feedbackText">哪里不对</label>
+              <textarea id="feedbackText" rows="2" placeholder="例如：横轴标题应该是 Time / s，不应该显示列名。"></textarea>
+              <label for="correctionText">应该怎么改</label>
+              <textarea id="correctionText" rows="2" placeholder="例如：把横轴标题改成 Time / s，保留 SVG 导出。"></textarea>
+              <div class="modify-actions">
+                <button id="feedbackButton" class="secondary" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" /></svg>
+                  保存反馈
+                </button>
+              </div>
+              <div id="feedbackState" class="edit-plan-summary"></div>
+            </section>
+            <section id="modifyPanel" class="modify-panel" hidden>
+              <div class="modify-heading">
+                <div>
+                  <h3>继续修改</h3>
+                  <p>看到结果后，直接说要改哪里。</p>
+                </div>
+                <span id="revisionState">Revision 0</span>
+              </div>
+              <label for="modifyText">修改要求</label>
+              <textarea id="modifyText" rows="2" placeholder="例如：把点改成红色，去掉拟合线，导出 svg"></textarea>
+              <div class="modify-actions">
+                <button id="modifyButton" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                  应用修改
+                </button>
+              </div>
+              <div id="editPlanSummary" class="edit-plan-summary"></div>
+              <div id="revisionList" class="revision-list"></div>
+            </section>
+          </section>
+        </section>
+
+        <aside class="inspector-column" aria-label="检查面板">
+          <section class="panel intent-panel" aria-label="AI 理解">
+            <div class="panel-heading">
+              <h2>AI 理解</h2>
+              <span id="intentState">未生成</span>
+            </div>
+            <div class="slot-grid" id="slotGrid"></div>
+            <div id="questions" class="questions"></div>
+            <div id="assumptions" class="assumptions"></div>
+          </section>
+
+          <section class="panel data-panel" aria-label="数据概况">
+            <div class="panel-heading">
+              <h2>数据概况</h2>
+              <span id="dataState">等待解析</span>
+            </div>
+            <div id="profileSummary" class="empty">先点击“理解需求”。</div>
+          </section>
+        </aside>
+
+        <aside class="utility-rail" aria-label="设置与上下文">
+          <section class="rail-card context-card">
+            <div class="rail-heading">
+              <h2>当前上下文</h2>
+            </div>
+            <label class="path-field" for="datasetPath">
+              数据文件
+              <input id="datasetPath" value="examples/sample_xy.csv" />
+            </label>
+            <label class="toggle-field" for="useOrigin">
+              <input id="useOrigin" type="checkbox" />
+              调用 Origin 生成 OPJU/PNG
+            </label>
+          </section>
+
+          <details class="rail-card key-panel">
+            <summary>
+              <span>
+                <strong>模型与密钥</strong>
+                <small id="qwenKeyState">检测中</small>
+              </span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4" /></svg>
+            </summary>
+            <div class="key-fields">
+              <label for="qwenApiKey">
+                DashScope API Key
+                <input id="qwenApiKey" type="password" placeholder="sk-..." autocomplete="off" />
+              </label>
+              <label for="qwenModel">
+                模型
+                <input id="qwenModel" value="qwen3.7-max" />
+              </label>
+              <label for="qwenBaseUrl">
+                Base URL
+                <input id="qwenBaseUrl" value="https://dashscope.aliyuncs.com/compatible-mode/v1" />
+              </label>
+              <label class="toggle-field key-toggle" for="qwenThinking">
+                <input id="qwenThinking" type="checkbox" checked />
+                enable_thinking
+              </label>
+              <div class="settings-actions">
+                <button id="saveQwenKeyButton" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8M7 3v5h8" /></svg>
+                  保存
+                </button>
+                <button id="deleteQwenKeyButton" class="danger" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
+                  删除
+                </button>
+              </div>
+              <p class="key-note">Key 使用 Windows DPAPI 加密保存到本机用户目录，页面不会回显明文。</p>
+            </div>
+          </details>
+        </aside>
+      </div>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
