@@ -28,6 +28,12 @@ class PlotKind(str, Enum):
     HISTOGRAM = "histogram"
 
 
+class SimulationBackend(str, Enum):
+    DRY_RUN = "dry-run"
+    MOCK = "mock"
+    COMSOL = "comsol"
+
+
 @dataclass(frozen=True)
 class ClarifyingQuestion:
     field: str
@@ -173,6 +179,62 @@ class AnalysisTask:
     output_formats: tuple[str, ...] = ("png",)
     fit_enabled: bool | None = None
     use_origin: bool = False
+
+
+@dataclass(frozen=True)
+class SimulationParameter:
+    name: str
+    value: float
+    unit: str | None = None
+    source: str = "user"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "value": self.value,
+            "unit": self.unit,
+            "source": self.source,
+        }
+
+
+@dataclass(frozen=True)
+class ThermalSimulationTask:
+    goal: str
+    template_id: str = "generic_stationary_heat"
+    template_path: Path | None = None
+    backend: SimulationBackend = SimulationBackend.MOCK
+    parameters: dict[str, float] = field(default_factory=dict)
+    outputs: tuple[str, ...] = ("max_temperature_C", "thermal_summary_csv")
+    study_type: str = "stationary"
+
+
+@dataclass(frozen=True)
+class ThermalSimulationSpec:
+    source_request: str
+    template_id: str
+    parameters: tuple[SimulationParameter, ...]
+    backend: SimulationBackend = SimulationBackend.MOCK
+    template_path: Path | None = None
+    study_type: str = "stationary"
+    outputs: tuple[str, ...] = ("max_temperature_C", "thermal_summary_csv")
+    assumptions: tuple[str, ...] = ()
+    schema_version: str = "thermal-simulation-spec/v1"
+
+    def parameter_map(self) -> dict[str, float]:
+        return {parameter.name: parameter.value for parameter in self.parameters}
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "source_request": self.source_request,
+            "template_id": self.template_id,
+            "template_path": str(self.template_path) if self.template_path else None,
+            "backend": self.backend.value,
+            "study_type": self.study_type,
+            "parameters": [parameter.to_dict() for parameter in self.parameters],
+            "outputs": list(self.outputs),
+            "assumptions": list(self.assumptions),
+        }
 
 
 @dataclass(frozen=True)
@@ -379,6 +441,30 @@ class WorkflowResult:
             "profile": self.profile.to_dict(),
             "regression": self.regression.to_dict() if self.regression else None,
             "plot_spec": self.plot_spec.to_dict() if self.plot_spec else None,
+            "checks": [check.to_dict() for check in self.checks],
+            "artifacts": self.artifacts,
+            "passed": self.passed,
+        }
+
+
+@dataclass
+class ThermalSimulationResult:
+    spec: ThermalSimulationSpec
+    checks: list[CheckResult] = field(default_factory=list)
+    metrics: dict[str, Any] = field(default_factory=dict)
+    artifacts: dict[str, str] = field(default_factory=dict)
+    status: str = "planned"
+
+    @property
+    def passed(self) -> bool:
+        return all(check.passed for check in self.checks if check.severity == "error")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": "thermal-simulation-result/v1",
+            "status": self.status,
+            "spec": self.spec.to_dict(),
+            "metrics": self.metrics,
             "checks": [check.to_dict() for check in self.checks],
             "artifacts": self.artifacts,
             "passed": self.passed,

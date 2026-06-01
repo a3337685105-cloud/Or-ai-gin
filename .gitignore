@@ -18,3 +18,10 @@ data/private/
 *.oggu
 *.ogg?
 *.tmp
+
+*.zip
+
+*.mph
+*.mphbin
+*.mphtxt
+*.mphlog

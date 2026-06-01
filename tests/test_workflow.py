@@ -16,16 +16,34 @@ if str(SRC) not in sys.path:
 from origin_ai_lab.connectors.csv_table import profile_csv
 from origin_ai_lab.agents.data_router import route_dataset_rule
 from origin_ai_lab.agents.requirement_intake import infer_requirement
-from origin_ai_lab.models import AnalysisTask, PlotEditOperation, PlotEditPlan, PlotKind, PlotSpec, TaskType
+from origin_ai_lab.agents.research_intake_harness import build_research_work_order, intake_question_bank
+from origin_ai_lab.models import (
+    AnalysisTask,
+    PlotEditOperation,
+    PlotEditPlan,
+    PlotKind,
+    PlotSpec,
+    SimulationBackend,
+    TaskType,
+    ThermalSimulationTask,
+)
 from origin_ai_lab.evaluation.plot_accuracy import detect_peak_candidates, evaluate_plot_accuracy
 from origin_ai_lab.evaluation.visual_quality import evaluate_image_quality
 from origin_ai_lab.origin_analysis_adapters import planned_origin_adapters
 from origin_ai_lab.origin_templates import select_origin_template
 from origin_ai_lab.plotting.spec_editor import PlotSpecValidationError, apply_edit_plan
 from origin_ai_lab.secrets_store import get_secret, save_secret, secret_exists
+from origin_ai_lab.simulations.comsol_cases import get_comsol_case
+from origin_ai_lab.simulations.thermal_harness import (
+    build_official_case_inventory,
+    example_thermal_model_proposal,
+    run_thermal_harness,
+    validate_thermal_model_proposal,
+)
 from origin_ai_lab.web_server import OriginAIWebHandler
 from origin_ai_lab.workflows.analyze_and_plot import run_analysis
 from origin_ai_lab.workflows.modify_plot import create_initial_plot_revision, modify_plot_revision
+from origin_ai_lab.workflows.thermal_simulation import run_thermal_simulation
 
 
 class WorkflowTests(unittest.TestCase):
@@ -106,6 +124,95 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue((self.tmp / "result.json").exists())
         self.assertTrue((self.tmp / "plot_spec.json").exists())
         self.assertTrue((self.tmp / "normalized_data.csv").exists())
+
+    def test_run_thermal_simulation_mock_writes_artifacts(self) -> None:
+        task = ThermalSimulationTask(
+            goal="steady-state chip thermal check",
+            backend=SimulationBackend.MOCK,
+            parameters={
+                "chip_power_W": 4.0,
+                "ambient_temp_C": 25.0,
+                "h_conv_W_m2K": 20.0,
+                "cooling_area_m2": 0.02,
+            },
+        )
+
+        result = run_thermal_simulation(task, self.tmp)
+
+        self.assertTrue(result.passed)
+        self.assertEqual(result.status, "mock-complete")
+        self.assertEqual(result.metrics["solver"], "mock_lumped_thermal_resistance")
+        self.assertGreater(result.metrics["max_temperature_C"], 25.0)
+        self.assertTrue((self.tmp / "thermal_simulation_spec.json").exists())
+        self.assertTrue((self.tmp / "thermal_execution_plan.json").exists())
+        self.assertTrue((self.tmp / "thermal_summary.csv").exists())
+        self.assertTrue((self.tmp / "thermal_result.json").exists())
+
+    def test_run_thermal_simulation_comsol_requires_template(self) -> None:
+        task = ThermalSimulationTask(
+            goal="real COMSOL run",
+            backend=SimulationBackend.COMSOL,
+            parameters={"chip_power_W": 5.0},
+        )
+
+        result = run_thermal_simulation(task, self.tmp)
+        checks = {check.name: check for check in result.checks}
+
+        self.assertFalse(result.passed)
+        self.assertEqual(result.status, "invalid")
+        self.assertFalse(checks["comsol_template_available"].passed)
+
+    def test_comsol_case_registry_resolves_relative_path(self) -> None:
+        case = get_comsol_case("busbar_smoke")
+        fake_root = self.tmp / "COMSOL64"
+        expected = fake_root / "Multiphysics" / "applications" / "COMSOL_Multiphysics" / "Multiphysics" / "busbar.mph"
+        expected.parent.mkdir(parents=True)
+        expected.write_text("", encoding="utf-8")
+
+        self.assertEqual(case.study, "std1")
+        self.assertEqual(case.resolve_path(fake_root), expected)
+
+    def test_thermal_model_proposal_validation_accepts_example(self) -> None:
+        checks = validate_thermal_model_proposal(example_thermal_model_proposal())
+        by_name = {check.name: check for check in checks}
+
+        self.assertTrue(all(check.passed for check in checks if check.severity == "error"))
+        self.assertTrue(by_name["thermal_sink_or_reference_present"].passed)
+
+    def test_thermal_model_proposal_validation_rejects_unbounded_model(self) -> None:
+        proposal = example_thermal_model_proposal()
+        proposal["boundary_conditions"] = []
+
+        checks = validate_thermal_model_proposal(proposal)
+        by_name = {check.name: check for check in checks}
+
+        self.assertFalse(by_name["thermal_boundary_conditions_present"].passed)
+        self.assertFalse(by_name["thermal_sink_or_reference_present"].passed)
+
+    def test_thermal_harness_writes_report_for_case_subset(self) -> None:
+        report = run_thermal_harness(
+            output_dir=self.tmp,
+            backend=SimulationBackend.DRY_RUN,
+            case_ids=("busbar_smoke",),
+        )
+
+        self.assertTrue(report["model_proposal_passed"])
+        self.assertEqual(report["case_ids"], ["busbar_smoke"])
+        self.assertTrue((self.tmp / "thermal_model_schema.json").exists())
+        self.assertTrue((self.tmp / "official_case_inventory.json").exists())
+        self.assertTrue((self.tmp / "thermal_harness_report.json").exists())
+
+    def test_official_case_inventory_reports_fake_available_case(self) -> None:
+        fake_root = self.tmp / "COMSOL64"
+        expected = fake_root / "Multiphysics" / "applications" / "COMSOL_Multiphysics" / "Multiphysics" / "busbar.mph"
+        expected.parent.mkdir(parents=True)
+        expected.write_text("", encoding="utf-8")
+
+        inventory = build_official_case_inventory(fake_root)
+        busbar = next(item for item in inventory if item["case_id"] == "busbar_smoke")
+
+        self.assertTrue(busbar["available"])
+        self.assertEqual(busbar["resolved_path"], str(expected))
 
     def test_run_analysis_material_export_writes_origin_ready_csv(self) -> None:
         task = AnalysisTask(
@@ -337,6 +444,41 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(intent.y_column, "signal_v")
         self.assertIn("png", intent.output_formats)
         self.assertNotEqual(intent.style.get("mark"), "line")
+
+    def test_research_intake_question_bank_has_single_front_door_fields(self) -> None:
+        fields = {question["field"] for question in intake_question_bank()}
+
+        self.assertIn("intended_use", fields)
+        self.assertIn("system_description", fields)
+        self.assertIn("heat_sources", fields)
+        self.assertIn("output_format", fields)
+
+    def test_research_intake_builds_thick_context_and_thin_work_order(self) -> None:
+        work_order = build_research_work_order(
+            "我想判断5W芯片贴在铝板上会不会超过80度，先给我自己判断方向用",
+            {
+                "system_description": "5W chip on aluminum plate",
+                "geometry": "simplified block model",
+                "heat_sources": "chip total power 5 W",
+                "cooling_boundaries": "natural convection at 25 C",
+                "constraints": "max temperature below 80 C",
+                "output_format": "short memo",
+            },
+        )
+
+        self.assertTrue(work_order.ready_to_plan)
+        self.assertEqual(work_order.user_job, "feasibility_screening")
+        self.assertEqual(work_order.thick_context["domain"], "thermal_simulation")
+        self.assertEqual(work_order.thick_context["heat_sources"], "chip total power 5 W")
+        self.assertEqual(work_order.core_thread["primary_qoi"], "maximum_temperature")
+        self.assertIn("short_decision_memo", work_order.planned_outputs)
+
+    def test_research_intake_asks_blocking_questions_when_source_is_too_thin(self) -> None:
+        work_order = build_research_work_order("热仿真")
+
+        self.assertFalse(work_order.ready_to_plan)
+        self.assertIn("system_description", work_order.missing_blockers)
+        self.assertTrue(work_order.next_questions)
 
     def test_plot_spec_edit_plan_updates_style_fit_and_export(self) -> None:
         profile = profile_csv(ROOT / "examples" / "sample_xy.csv")
