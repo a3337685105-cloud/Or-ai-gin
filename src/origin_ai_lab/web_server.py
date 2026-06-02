@@ -12,7 +12,7 @@ from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
 from origin_ai_lab.agents.planner_adapter import active_planner_name, infer_requirement_auto
-from origin_ai_lab.agents.research_intake_harness import build_research_work_order
+from origin_ai_lab.agents.research_intake_harness import build_research_work_order, intake_question_bank
 from origin_ai_lab.agents.qwen_planner import (
     DEFAULT_QWEN_BASE_URL,
     DEFAULT_QWEN_MODEL,
@@ -68,6 +68,9 @@ class OriginAIWebHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         try:
             payload = self._read_json()
+            if parsed.path == "/api/research-intake":
+                self._handle_research_intake(payload)
+                return
             if parsed.path == "/api/intake":
                 self._handle_intake(payload)
                 return
@@ -136,6 +139,32 @@ class OriginAIWebHandler(BaseHTTPRequestHandler):
             response["profile"] = profile.to_dict()
             response["intent"] = infer_requirement_auto(request, profile).to_dict()
         self._send_json(response)
+
+    def _handle_research_intake(self, payload: dict[str, Any]) -> None:
+        self._send_json(self._research_intake_payload(payload))
+
+    def _research_intake_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
+        goal = str(payload.get("goal") or payload.get("request") or "").strip()
+        if not goal:
+            raise ValueError("请输入研究目标。")
+        raw_answers = payload.get("answers")
+        answers = dict(raw_answers) if isinstance(raw_answers, dict) else {}
+        context = str(payload.get("context") or "").strip()
+        if context:
+            answers["additional_context"] = context
+        files = _files_from_value(payload.get("files"))
+        if files:
+            answers["files"] = files
+        work_order = build_research_work_order(goal, answers)
+        work_order_data = work_order.to_dict()
+        if files:
+            thick_context = work_order_data.setdefault("thick_context", {})
+            extra_context = thick_context.setdefault("extra_user_context", {})
+            extra_context.setdefault("files", files)
+        return {
+            "work_order": work_order_data,
+            "question_bank": intake_question_bank(),
+        }
 
     def _handle_analyze(self, payload: dict[str, Any]) -> None:
         request = str(payload.get("request") or "").strip()
@@ -427,6 +456,21 @@ def _formats_from_value(value: Any) -> tuple[str, ...]:
         if fmt in {"png", "svg", "pdf", "opju"} and fmt not in formats:
             formats.append(fmt)
     return tuple(formats)
+
+
+def _files_from_value(value: Any) -> list[str]:
+    if isinstance(value, str):
+        raw_items = value.replace(";", "\n").splitlines()
+    elif isinstance(value, (list, tuple)):
+        raw_items = value
+    else:
+        raw_items = []
+    files: list[str] = []
+    for item in raw_items:
+        text = str(item).strip()
+        if text and text not in files:
+            files.append(text)
+    return files
 
 
 if __name__ == "__main__":
