@@ -17,6 +17,13 @@ class ComsolCase:
     category: str = "thermal"
     reference_url: str | None = None
     expected_metrics: dict[str, object] | None = None
+    stage: int = 0
+    golden_role: str = "smoke"
+    physics: tuple[str, ...] = ()
+    verification_targets: tuple[str, ...] = ()
+    required_artifacts: tuple[str, ...] = ("solver_log", "solved_mph", "credibility_card")
+    comparator: dict[str, object] | None = None
+    risk_tags: tuple[str, ...] = ()
 
     def resolve_path(self, install_root: Path | None = None) -> Path | None:
         root = install_root or discover_comsol().install_path
@@ -39,6 +46,13 @@ class ComsolCase:
             "acceptance": list(self.acceptance),
             "reference_url": self.reference_url,
             "expected_metrics": self.expected_metrics or {},
+            "stage": self.stage,
+            "golden_role": self.golden_role,
+            "physics": list(self.physics),
+            "verification_targets": list(self.verification_targets),
+            "required_artifacts": list(self.required_artifacts),
+            "comparator": self.comparator or {},
+            "risk_tags": list(self.risk_tags),
         }
 
 
@@ -56,6 +70,15 @@ COMSOL_THERMAL_CASES: dict[str, ComsolCase] = {
         ),
         category="multiphysics_smoke",
         reference_url="https://www.comsol.com/model/electrical-heating-in-a-busbar-973",
+        stage=0,
+        golden_role="installation_and_solver_smoke",
+        physics=("joule_heating", "conduction", "multiphysics"),
+        verification_targets=("batch_execution", "solver_log_completion", "solved_model_artifact"),
+        comparator={
+            "type": "artifact_and_log",
+            "required": {"return_code": 0, "solver_log_completed": True, "output_mph_exists": True},
+        },
+        risk_tags=("does_not_validate_custom_geometry", "does_not_extract_temperature_qoi_yet"),
     ),
     "thin_plate_verification": ComsolCase(
         case_id="thin_plate_verification",
@@ -69,6 +92,17 @@ COMSOL_THERMAL_CASES: dict[str, ComsolCase] = {
         ),
         category="verification_conduction",
         reference_url="https://doc.comsol.com/6.4/doc/com.comsol.help.models.heat.thin_plate/thin_plate.html",
+        stage=1,
+        golden_role="official_verification_model",
+        physics=("conduction", "out_of_plane_heat_transfer"),
+        verification_targets=("2d_3d_temperature_profile_overlap", "temperature_field_shape"),
+        comparator={
+            "type": "profile_comparison",
+            "qoi": "temperature_profile",
+            "planned_tolerance": {"relative_rms_percent_max": 2.0},
+            "automation_status": "requires_result_export",
+        },
+        risk_tags=("requires_profile_export", "selection_mapping_not_automated"),
     ),
     "slab_conduction_tutorial": ComsolCase(
         case_id="slab_conduction_tutorial",
@@ -82,6 +116,17 @@ COMSOL_THERMAL_CASES: dict[str, ComsolCase] = {
         ),
         category="tutorial_conduction",
         reference_url="https://doc.comsol.com/6.4/doc/com.comsol.help.models.heat.heat_conduction_in_slab/heat_conduction_in_slab.html",
+        stage=3,
+        golden_role="tutorial_trend_benchmark",
+        physics=("conduction", "slab_heat_transfer"),
+        verification_targets=("profile_trend", "temperature_bounds", "transient_or_stationary_interpretation"),
+        comparator={
+            "type": "trend_and_bounds",
+            "qoi": "temperature_profile",
+            "planned_checks": ("monotonic_or_expected_shape", "finite_temperature_bounds"),
+            "automation_status": "requires_result_export",
+        },
+        risk_tags=("qualitative_until_exported_profiles_are_available",),
     ),
     "cylinder_conduction_tutorial": ComsolCase(
         case_id="cylinder_conduction_tutorial",
@@ -95,6 +140,17 @@ COMSOL_THERMAL_CASES: dict[str, ComsolCase] = {
         ),
         category="tutorial_conduction",
         reference_url="https://doc.comsol.com/6.4/doc/com.comsol.help.models.heat.cylinder_conduction/cylinder_conduction.html",
+        stage=4,
+        golden_role="tutorial_trend_benchmark",
+        physics=("radial_conduction", "axisymmetric_heat_transfer"),
+        verification_targets=("radial_temperature_profile", "temperature_bounds"),
+        comparator={
+            "type": "trend_and_bounds",
+            "qoi": "radial_temperature_profile",
+            "planned_checks": ("monotonic_radial_profile", "finite_temperature_bounds"),
+            "automation_status": "requires_result_export",
+        },
+        risk_tags=("qualitative_until_exported_profiles_are_available",),
     ),
     "localized_heat_source_verification": ComsolCase(
         case_id="localized_heat_source_verification",
@@ -108,6 +164,17 @@ COMSOL_THERMAL_CASES: dict[str, ComsolCase] = {
         ),
         category="verification_source",
         reference_url="https://doc.comsol.com/6.4/doc/com.comsol.help.models.heat.localized_heat_source/localized_heat_source.html",
+        stage=5,
+        golden_role="official_verification_model",
+        physics=("localized_heat_source", "conduction"),
+        verification_targets=("hotspot_location", "peak_temperature_behavior"),
+        comparator={
+            "type": "spatial_qoi",
+            "qoi": "peak_temperature_location",
+            "planned_checks": ("peak_near_source_region", "finite_temperature_bounds"),
+            "automation_status": "requires_result_export",
+        },
+        risk_tags=("requires_peak_location_export",),
     ),
     "chip_cooling_reference": ComsolCase(
         case_id="chip_cooling_reference",
@@ -131,6 +198,18 @@ COMSOL_THERMAL_CASES: dict[str, ComsolCase] = {
                 "radiation": 80,
             }
         },
+        stage=2,
+        golden_role="domain_reference_benchmark",
+        physics=("electronics_cooling", "conduction", "convection", "radiation_optional"),
+        verification_targets=("max_chip_temperature", "configuration_comparison"),
+        comparator={
+            "type": "published_reference_values",
+            "qoi": "max_chip_temperature_C",
+            "planned_tolerance": {"absolute_error_C_max": 5.0},
+            "reference_values_key": "max_chip_temperature_C_reference_values",
+            "automation_status": "requires_qoi_export",
+        },
+        risk_tags=("multiple_configurations_need_explicit_selection", "requires_temperature_qoi_export"),
     ),
     "surface_mount_package_reference": ComsolCase(
         case_id="surface_mount_package_reference",
@@ -146,6 +225,17 @@ COMSOL_THERMAL_CASES: dict[str, ComsolCase] = {
         ),
         category="electronics_cooling",
         reference_url="https://doc.comsol.com/6.4/doc/com.comsol.help.models.heat.surface_mount_package/surface_mount_package.html",
+        stage=6,
+        golden_role="domain_plausibility_benchmark",
+        physics=("electronics_package", "heat_spreading", "conduction"),
+        verification_targets=("package_temperature", "heat_flux_plausibility"),
+        comparator={
+            "type": "plausibility_bounds",
+            "qoi": "package_temperature_and_heat_flux",
+            "planned_checks": ("finite_temperature", "finite_heat_flux", "no_unphysical_signs"),
+            "automation_status": "requires_qoi_export",
+        },
+        risk_tags=("package_stackup_assumptions_are_sensitive",),
     ),
     "thermal_contact_package_heat_sink": ComsolCase(
         case_id="thermal_contact_package_heat_sink",
@@ -164,6 +254,17 @@ COMSOL_THERMAL_CASES: dict[str, ComsolCase] = {
             "https://doc.comsol.com/6.4/doc/com.comsol.help.models.heat."
             "thermal_contact_electronic_package_heat_sink/thermal_contact_electronic_package_heat_sink.html"
         ),
+        stage=7,
+        golden_role="thermal_contact_risk_benchmark",
+        physics=("thermal_contact", "electronics_cooling", "heat_sink"),
+        verification_targets=("contact_temperature_drop", "contact_resistance_sensitivity"),
+        comparator={
+            "type": "interface_delta_temperature",
+            "qoi": "temperature_drop_across_contact",
+            "planned_checks": ("nonzero_contact_delta_when_resistance_enabled", "finite_temperature_bounds"),
+            "automation_status": "requires_interface_qoi_export",
+        },
+        risk_tags=("contact_resistance_inputs_dominate_result", "requires_interface_selection_export"),
     ),
 }
 

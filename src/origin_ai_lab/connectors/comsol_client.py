@@ -6,10 +6,15 @@ from typing import Any
 
 from origin_ai_lab.connectors.software_discovery import discover_comsol
 from origin_ai_lab.models import ThermalSimulationSpec
+from origin_ai_lab.simulations.vv import parse_comsol_solver_log
 
 
 class ComsolUnavailable(RuntimeError):
     """Raised when COMSOL execution is requested but no local bridge is configured."""
+
+    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
+        super().__init__(message)
+        self.details = details or {}
 
 
 class ComsolThermalClient:
@@ -57,23 +62,39 @@ class ComsolThermalClient:
             timeout=1800,
         )
         log_text = _read_text_lossy(batch_log)
+        solver_log_summary = parse_comsol_solver_log(log_text, completed.returncode)
+        failure_details = {
+            "solver": "comsolbatch",
+            "solver_converged": solver_log_summary.completed,
+            "return_code": completed.returncode,
+            "command": command,
+            "batch_log": str(batch_log),
+            "status_file": str(status_file) if status_file.exists() else None,
+            "log_summary": solver_log_summary.to_dict(),
+            "solver_log_summary": solver_log_summary.to_dict(),
+        }
         if completed.returncode != 0:
             raise ComsolUnavailable(
                 "COMSOL batch execution failed with exit code "
-                f"{completed.returncode}. See {batch_log}."
+                f"{completed.returncode}. See {batch_log}.",
+                details=failure_details,
             )
         if not output_mph.exists():
-            raise ComsolUnavailable(f"COMSOL batch completed but did not create {output_mph}.")
+            raise ComsolUnavailable(
+                f"COMSOL batch completed but did not create {output_mph}.",
+                details=failure_details,
+            )
 
         return {
             "solver": "comsolbatch",
-            "solver_converged": _log_indicates_success(log_text),
+            "solver_converged": solver_log_summary.completed,
             "return_code": completed.returncode,
             "command": command,
             "output_mph": str(output_mph),
             "batch_log": str(batch_log),
             "status_file": str(status_file) if status_file.exists() else None,
-            "log_summary": _summarize_log(log_text),
+            "log_summary": solver_log_summary.to_dict(),
+            "solver_log_summary": solver_log_summary.to_dict(),
             "parameter_updates_applied": False,
             "parameter_update_note": (
                 "This smoke-test connector solves an existing MPH template. "
@@ -106,19 +127,8 @@ def _read_text_lossy(path: Path) -> str:
 
 
 def _log_indicates_success(log_text: str) -> bool:
-    normalized = log_text.lower()
-    return (
-        "completed" in normalized
-        or "100 %" in normalized
-        or "100%" in normalized
-        or "完成" in log_text
-    ) and "error" not in normalized
+    return parse_comsol_solver_log(log_text).completed
 
 
 def _summarize_log(log_text: str) -> dict[str, Any]:
-    lines = [line.strip() for line in log_text.splitlines() if line.strip()]
-    tail = lines[-12:]
-    return {
-        "line_count": len(lines),
-        "tail": tail,
-    }
+    return parse_comsol_solver_log(log_text).to_dict()

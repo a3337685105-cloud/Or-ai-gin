@@ -60,6 +60,7 @@ python -m origin_ai_lab intake "帮我画散点图，加线性拟合，导出 pn
 origin-ai analyze examples/sample_xy.csv --out runs/demo --no-origin
 origin-ai thermal --backend mock --out runs/thermal_demo --param chip_power_W=5 --param ambient_temp_C=25 --param h_conv_W_m2K=10
 origin-ai thermal-harness --backend dry-run --case busbar_smoke --case chip_cooling_reference
+$env:PYTHONPATH='src'; python -m origin_ai_lab.cli thermal --backend comsol --case busbar_smoke --out runs/thermal_comsol_busbar_vv_src
 python scripts\evaluate_intake_cases.py --planner rule
 python scripts\qwen_smoke_test.py --model qwen3.7-max
 $env:PYTHONPATH='src'; python -m origin_ai_lab.web_server
@@ -72,6 +73,10 @@ If `origin-ai` is not on `PATH` after editable install, use the module entry poi
 ```powershell
 python -m origin_ai_lab.cli analyze examples\sample_xy.csv --out runs/demo --no-origin
 ```
+
+Thermal runs write internal V&V artifacts beside `thermal_result.json`: solver-log summary,
+boundary-condition audit, energy-balance check, convergence-study plan, and a credibility card.
+These are evidence-package outputs, not separate user-facing modes.
 
 Then open:
 
