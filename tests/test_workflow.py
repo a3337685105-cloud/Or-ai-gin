@@ -37,6 +37,7 @@ from origin_ai_lab.evaluation.visual_quality import evaluate_image_quality
 from origin_ai_lab.origin_analysis_adapters import planned_origin_adapters
 from origin_ai_lab.origin_templates import select_origin_template
 from origin_ai_lab.plotting.spec_editor import PlotSpecValidationError, apply_edit_plan
+from origin_ai_lab.reports.thermal_report import build_thermal_report_package
 from origin_ai_lab.secrets_store import get_secret, save_secret, secret_exists
 from origin_ai_lab.simulations.comsol_cases import get_comsol_case
 from origin_ai_lab.simulations.thermal_harness import (
@@ -160,6 +161,95 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue((self.tmp / "thermal_visualization_manifest.json").exists())
         self.assertTrue((self.tmp / "thermal_visualization_quality.json").exists())
         self.assertTrue((self.tmp / "thermal_result.json").exists())
+        self.assertTrue((self.tmp / "thermal_report_manifest.json").exists())
+        self.assertTrue((self.tmp / "thermal_report.md").exists())
+        self.assertTrue((self.tmp / "artifact_index.json").exists())
+        self.assertTrue((self.tmp / "evidence_gaps.json").exists())
+
+        manifest = json.loads((self.tmp / "thermal_report_manifest.json").read_text(encoding="utf-8"))
+        section_ids = {section["id"] for section in manifest["sections"]}
+
+        self.assertIn("thermal_report_manifest", result.artifacts)
+        self.assertIn("summary_conclusion_boundary", section_ids)
+        self.assertIn("user_goal_criteria", section_ids)
+        self.assertIn("inputs_assumptions_physics", section_ids)
+        self.assertIn("model_solver_software", section_ids)
+        self.assertIn("results_figures_tables", section_ids)
+        self.assertIn("validation_risks", section_ids)
+        self.assertIn("reproducibility_index", section_ids)
+        self.assertEqual(manifest["source_inputs"]["visualization_manifest"]["status"], "missing")
+        self.assertFalse(manifest["report_modes"]["paper_external_claim"]["supported"])
+
+        gaps = json.loads((self.tmp / "evidence_gaps.json").read_text(encoding="utf-8"))
+        gap_ids = {gap["id"] for gap in gaps["gaps"]}
+        self.assertIn("visualization_manifest_missing", gap_ids)
+
+        report_text = (self.tmp / "thermal_report.md").read_text(encoding="utf-8")
+        self.assertIn("Summary and Conclusion Boundary", report_text)
+        self.assertIn("Report Mode Boundary", report_text)
+        self.assertIn("Evidence Gaps", report_text)
+
+    def test_thermal_report_builder_uses_work_order_and_visual_artifacts(self) -> None:
+        task = ThermalSimulationTask(
+            goal="Estimate whether a chip thermal simulation stays below 80 C.",
+            backend=SimulationBackend.MOCK,
+            parameters={
+                "chip_power_W": 4.0,
+                "ambient_temp_C": 25.0,
+                "h_conv_W_m2K": 20.0,
+                "cooling_area_m2": 0.02,
+            },
+        )
+        result = run_thermal_simulation(task, self.tmp)
+        figure_path = self.tmp / "temperature_overview.png"
+        figure_path.write_text("mock visual artifact", encoding="utf-8")
+        origin_project_path = self.tmp / "thermal_overview.opju"
+        origin_project_path.write_text("mock origin project", encoding="utf-8")
+        work_order = build_research_work_order(
+            "Estimate whether a chip thermal simulation stays below 80 C.",
+            {
+                "intended_use": "presentation",
+                "system_description": "4 W chip on aluminum plate",
+                "geometry": "simplified block model",
+                "materials": "aluminum plate and silicon chip; property sources pending",
+                "heat_sources": "chip total power 4 W",
+                "cooling_boundaries": "natural convection at 25 C",
+                "constraints": "max temperature below 80 C",
+                "output_format": "presentation report",
+            },
+        )
+
+        package = build_thermal_report_package(
+            output_dir=self.tmp,
+            work_order=work_order,
+            thermal_result=result,
+            visualization_manifest={
+                "figures": [
+                    {
+                        "id": "temperature_overview",
+                        "path": str(figure_path),
+                        "quantity": "temperature",
+                        "unit": "degC",
+                    }
+                ]
+            },
+            external_artifacts={"origin_project": str(origin_project_path)},
+            validation_checks=result.checks,
+        )
+        manifest = json.loads(package.manifest_path.read_text(encoding="utf-8"))
+        artifact_index = json.loads(package.artifact_index_path.read_text(encoding="utf-8"))
+        gap_ids = {gap["id"] for gap in json.loads(package.evidence_gaps_path.read_text(encoding="utf-8"))["gaps"]}
+        artifact_ids = {artifact["id"] for artifact in artifact_index["artifacts"]}
+
+        self.assertEqual(manifest["source_inputs"]["research_work_order"]["status"], "complete")
+        self.assertEqual(manifest["summary"]["criterion_status"], "meets_recorded_criterion")
+        self.assertTrue(manifest["report_modes"]["internal_judgment"]["supported"])
+        self.assertTrue(manifest["report_modes"]["presentation"]["supported"])
+        self.assertFalse(manifest["report_modes"]["paper_external_claim"]["supported"])
+        self.assertIn("temperature_overview", artifact_ids)
+        self.assertIn("origin_project", artifact_ids)
+        self.assertNotIn("material_table_missing", gap_ids)
+        self.assertIn("software_versions_missing", gap_ids)
 
     def test_thermal_visualization_manifest_declares_default_package(self) -> None:
         task = ThermalSimulationTask(

@@ -11,6 +11,7 @@ from origin_ai_lab.models import (
     ThermalSimulationResult,
     ThermalSimulationTask,
 )
+from origin_ai_lab.reports.thermal_report import build_thermal_report_package
 from origin_ai_lab.simulations.thermal import (
     build_thermal_execution_plan,
     build_thermal_spec,
@@ -172,7 +173,17 @@ def run_thermal_simulation(task: ThermalSimulationTask, output_dir: Path) -> The
     )
     result_path = output_dir / "thermal_result.json"
     artifacts["thermal_result"] = str(result_path)
+    artifacts["thermal_report_manifest"] = str(output_dir / "thermal_report_manifest.json")
+    artifacts["thermal_report_markdown"] = str(output_dir / "thermal_report.md")
+    artifacts["thermal_artifact_index"] = str(output_dir / "artifact_index.json")
+    artifacts["thermal_evidence_gaps"] = str(output_dir / "evidence_gaps.json")
     result_path.write_text(json.dumps(result.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+    build_thermal_report_package(
+        output_dir=output_dir,
+        work_order=None,
+        thermal_result=result,
+        validation_checks=checks,
+    )
     return result
 
 
