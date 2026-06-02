@@ -60,6 +60,10 @@ python -m origin_ai_lab.cli thermal-harness --backend dry-run --case busbar_smok
 - `thermal_result.json`: checks, metrics, artifact paths, and pass/fail status.
 - `*_solved.mph`: COMSOL backend solved model output.
 - `*_comsolbatch.log`: COMSOL batch solver log.
+- `comsol_result_manifest.json`: COMSOL solve/export command, log summary, artifact list, export status, and missing evidence.
+- `*_temperature_field.png`: controlled COMSOL image export from an existing result plot group when available.
+- `*_temperature_table.csv`: controlled COMSOL data export for expression `T` when available.
+- `*_max_temperature.csv`: max temperature derived from the exported COMSOL temperature table when direct COMSOL numerical max export is unavailable.
 
 ## Initial Thermal Parameters
 
@@ -144,17 +148,33 @@ This gives the LLM a useful modeling surface while keeping the executable bounda
 
 ## COMSOL Connection Plan
 
-`ComsolThermalClient` currently uses COMSOL's documented batch interface:
+`ComsolThermalClient` uses COMSOL's documented batch interface for solving:
 
 ```text
 comsolbatch -inputfile in.mph -outputfile out.mph -study std1
 ```
 
 This is enough to validate local COMSOL installation, license availability, model loading,
-solver execution, and output-file generation. Parameter mutation is intentionally not enabled
-yet for arbitrary models. COMSOL supports command-line parameter injection through `-pname`,
-`-plist`, and `-paramfile`, and LiveLink for MATLAB can modify parameters with `mphsetparam`.
-Those paths should be added only after a template exposes reviewed parameter names.
+solver execution, and output-file generation.
+
+For generic result export, the connector now uses a second guarded step:
+
+```text
+comsolcompile ComsolResultExport.java
+comsolbatch -prefsdir <temporary-prefs> -inputfile ComsolResultExport.class -outputfile postprocessed.mph
+```
+
+The generated Java helper is fixed by this repository. It only loads the solved model and
+attempts approved exports for expression `T`: an existing plot-group image, a data CSV, and a
+max-temperature CSV. COMSOL security settings apply to Java methods and external classes, so
+the export step uses an isolated per-run `comsol.prefs` containing
+`security.external.filepermission=full`. This does not modify the user's global COMSOL
+preferences and does not create an arbitrary code execution surface for LLM output.
+
+Parameter mutation is intentionally not enabled yet for arbitrary models. COMSOL supports
+command-line parameter injection through `-pname`, `-plist`, and `-paramfile`, and LiveLink for
+MATLAB can modify parameters with `mphsetparam`. Those paths should be added only after a
+template exposes reviewed parameter names.
 
 Recommended first smoke test:
 
@@ -168,18 +188,24 @@ The AI layer should continue to edit only the white-listed parameter fields. It 
 
 ## Current Local Smoke Result
 
-On 2026-06-01, the project successfully detected and ran:
+On 2026-06-02, the project successfully detected and ran:
 
 - COMSOL Multiphysics 6.4.0.293
 - `comsolbatch.exe` at `C:\Program Files\COMSOL\COMSOL64\Multiphysics\bin\win64\comsolbatch.exe`
 - Official model: `COMSOL_Multiphysics\Multiphysics\busbar.mph`
 - Study tag: `std1`
-- Output: `runs\thermal_comsol_busbar\busbar_solved.mph`
-- Log: `runs\thermal_comsol_busbar\busbar_comsolbatch.log`
+- Output: `runs\thermal_comsol_busbar_export_v7\busbar_solved.mph`
+- Batch log: `runs\thermal_comsol_busbar_export_v7\busbar_comsolbatch.log`
+- Result manifest: `runs\thermal_comsol_busbar_export_v7\comsol_result_manifest.json`
+- Temperature PNG: `runs\thermal_comsol_busbar_export_v7\busbar_temperature_field.png`
+- Temperature table CSV: `runs\thermal_comsol_busbar_export_v7\busbar_temperature_table.csv`
+- Max temperature CSV: `runs\thermal_comsol_busbar_export_v7\busbar_max_temperature.csv`
 
-The solver log reached 100% completion and saved the solved MPH file. This proves the first
-connector boundary works. It does not yet prove that AI-selected parameters are applied or that
-thermal metrics are extracted from the solved model.
+The solver log reached 100% completion and saved the solved MPH file. The controlled export
+step compiled and ran a Java class through COMSOL batch, exported the temperature PNG and
+temperature table CSV, then derived `max_temperature_C = 57.28890574849246 degC` from the CSV.
+This proves the generic result-export boundary works for the official `busbar_smoke` case. It
+does not yet prove that AI-selected parameters are applied.
 
 ## Official Test Objects and Acceptance Standards
 

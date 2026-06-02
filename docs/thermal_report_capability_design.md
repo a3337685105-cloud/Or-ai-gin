@@ -101,6 +101,15 @@ Quality rules:
 - Save image/data specs so report figures are reproducible.
 - Reuse Origin for 1D/2D curves and parameter comparison plots.
 
+Current implementation status:
+
+- `ComsolThermalClient` solves the MPH model, compiles a fixed Java export helper, and runs the
+  helper through `comsolbatch` with a per-run security preferences directory.
+- `busbar_smoke` has been verified to export a temperature PNG, temperature table CSV, result
+  manifest, and max-temperature CSV derived from the exported table.
+- Direct COMSOL numerical max-node export is not yet stable for all models; table-derived
+  metrics are the current reliable fallback.
+
 ### Level 3: Visualization Package
 
 - Generate default thermal visualization set: overview, slices, isotherms, heat flux, probes, parameter comparisons.
