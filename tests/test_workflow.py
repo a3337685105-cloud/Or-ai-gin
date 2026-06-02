@@ -480,6 +480,53 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn("system_description", work_order.missing_blockers)
         self.assertTrue(work_order.next_questions)
 
+    def test_research_intake_can_plan_when_chinese_goal_has_enough_detail(self) -> None:
+        work_order = build_research_work_order(
+            "我想自己判断5W芯片贴在50mm铝板上，自然对流25C时会不会超过80C，输出简短判断"
+        )
+
+        self.assertTrue(work_order.ready_to_plan)
+        self.assertEqual(work_order.user_job, "feasibility_screening")
+        self.assertEqual(work_order.thick_context["domain"], "thermal_simulation")
+        self.assertIn("simulation", work_order.core_thread["required_capabilities"])
+        self.assertEqual(work_order.core_thread["primary_qoi"], "maximum_temperature")
+        self.assertFalse(work_order.missing_blockers)
+
+    def test_research_intake_distinguishes_user_use_cases(self) -> None:
+        cases = (
+            ("帮我自己判断这个散热方案可不可行", "feasibility_screening"),
+            ("请把这个热测试需求整理成实验方案，包含测点和参数矩阵", "experiment_planning"),
+            ("把结果整理成组会展示用的图和要点", "presentation"),
+            ("把这组XRD数据做成论文插图，导出SVG", "paper_figure"),
+            ("输出一个验证报告，包含benchmark对比和证据清单", "validation_report"),
+        )
+
+        for request, expected_job in cases:
+            with self.subTest(request=request):
+                work_order = build_research_work_order(request)
+                self.assertEqual(work_order.user_job, expected_job)
+
+    def test_research_intake_records_initial_evidence_trace_sources(self) -> None:
+        profile = profile_csv(ROOT / "examples" / "materials_xrd_export.csv").to_dict()
+        work_order = build_research_work_order(
+            "把这组XRD数据做成论文插图，标出主要峰并导出svg",
+            {
+                "dataset": "examples/materials_xrd_export.csv",
+                "dataset_profile": profile,
+                "expected_output": "论文插图 svg",
+            },
+        )
+        sources = {item["source"] for item in work_order.to_dict()["evidence_trace"]}
+
+        self.assertTrue(work_order.ready_to_plan)
+        self.assertEqual(work_order.user_job, "paper_figure")
+        self.assertEqual(work_order.thick_context["domain"], "materials_data_analysis")
+        self.assertIn("plotting", work_order.core_thread["required_capabilities"])
+        self.assertIn("user", sources)
+        self.assertIn("file", sources)
+        self.assertIn("tool_output", sources)
+        self.assertIn("default", sources)
+
     def test_plot_spec_edit_plan_updates_style_fit_and_export(self) -> None:
         profile = profile_csv(ROOT / "examples" / "sample_xy.csv")
         spec = PlotSpec(

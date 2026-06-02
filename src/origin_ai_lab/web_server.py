@@ -12,6 +12,7 @@ from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
 from origin_ai_lab.agents.planner_adapter import active_planner_name, infer_requirement_auto
+from origin_ai_lab.agents.research_intake_harness import build_research_work_order
 from origin_ai_lab.agents.qwen_planner import (
     DEFAULT_QWEN_BASE_URL,
     DEFAULT_QWEN_MODEL,
@@ -103,10 +104,38 @@ class OriginAIWebHandler(BaseHTTPRequestHandler):
         request = str(payload.get("request") or "").strip()
         if not request:
             raise ValueError("请输入绘图或分析需求。")
-        dataset = self._resolve_dataset(payload.get("dataset"))
-        profile = profile_csv(dataset)
-        intent = infer_requirement_auto(request, profile)
-        self._send_json({"profile": profile.to_dict(), "intent": intent.to_dict()})
+        answers = payload.get("answers") if isinstance(payload.get("answers"), dict) else {}
+        answers = dict(answers)
+        for field in ("intended_use", "expected_output", "output_format", "evidence_level"):
+            value = payload.get(field)
+            if value not in (None, "", [], {}):
+                answers[field] = value
+
+        profile = None
+        dataset_value = _optional_text(payload.get("dataset"))
+        if dataset_value:
+            dataset = self._resolve_dataset(dataset_value)
+            profile = profile_csv(dataset)
+            profile_dict = profile.to_dict()
+            answers["dataset"] = str(dataset.relative_to(ROOT))
+            answers["dataset_profile"] = profile_dict
+            files = answers.get("files") if isinstance(answers.get("files"), list) else []
+            files.append(
+                {
+                    "path": str(dataset.relative_to(ROOT)),
+                    "kind": "dataset",
+                    "role": "analysis_input",
+                    "profile": profile_dict,
+                }
+            )
+            answers["files"] = files
+
+        work_order = build_research_work_order(request, answers)
+        response: dict[str, Any] = {"work_order": work_order.to_dict()}
+        if profile is not None:
+            response["profile"] = profile.to_dict()
+            response["intent"] = infer_requirement_auto(request, profile).to_dict()
+        self._send_json(response)
 
     def _handle_analyze(self, payload: dict[str, Any]) -> None:
         request = str(payload.get("request") or "").strip()

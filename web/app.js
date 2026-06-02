@@ -1,6 +1,7 @@
 const state = {
   profile: null,
   intent: null,
+  workOrder: null,
   result: null,
   runId: null,
   revision: null,
@@ -222,6 +223,50 @@ function renderIntent(intent) {
     : "";
 }
 
+function renderWorkOrder(workOrder) {
+  if (!workOrder) {
+    renderIntent(state.intent);
+    return;
+  }
+
+  const core = workOrder.core_thread || {};
+  const context = workOrder.thick_context || {};
+  const capabilities = core.required_capabilities || context.required_capabilities || [];
+  const outputs = workOrder.planned_outputs || [];
+  intentState.textContent = workOrder.ready_to_plan ? "可规划" : "需追问";
+  setWorkflowStage(workOrder.ready_to_plan ? "confirm" : "intent", workOrder.ready_to_plan ? "等待规划" : "需要追问");
+  slotGrid.innerHTML = `
+    <div class="slot readonly-slot"><span>用途</span><strong>${escapeHtml(core.user_job_label || context.user_job_label || workOrder.user_job)}</strong></div>
+    <div class="slot readonly-slot"><span>证据等级</span><strong>${escapeHtml(workOrder.evidence_level)}</strong></div>
+    <div class="slot readonly-slot"><span>领域</span><strong>${escapeHtml(core.domain || context.domain || "")}</strong></div>
+    <div class="slot readonly-slot"><span>能力</span><strong>${escapeHtml(capabilities.join(" / ") || "analysis")}</strong></div>
+    <div class="slot readonly-slot wide-slot"><span>主线目标</span><strong>${escapeHtml(core.one_sentence_goal || workOrder.raw_goal)}</strong></div>
+    <div class="slot readonly-slot"><span>关注量</span><strong>${escapeHtml(core.primary_qoi || "to_be_confirmed")}</strong></div>
+    <div class="slot readonly-slot"><span>判据</span><strong>${escapeHtml(core.decision_criterion || "not_declared")}</strong></div>
+    <div class="slot readonly-slot wide-slot"><span>计划输出</span><strong>${escapeHtml(outputs.join(" / "))}</strong></div>
+  `;
+
+  const nextQuestions = workOrder.next_questions || [];
+  questions.innerHTML = nextQuestions.length
+    ? nextQuestions
+        .map((question) => {
+          const options = question.options && question.options.length ? ` 可选：${question.options.join(" / ")}` : "";
+          return `<div class="notice warning">${escapeHtml(question.question + options)}</div>`;
+        })
+        .join("")
+    : `<div class="notice">没有阻塞问题，可以进入内部规划。</div>`;
+
+  const traces = workOrder.evidence_trace || [];
+  const sourceSummary = Array.from(new Set(traces.map((item) => item.source))).join(" / ");
+  const assumptionItems = workOrder.assumptions || [];
+  assumptions.innerHTML = assumptionItems.length
+    ? assumptionItems.map((item) => `<div class="notice">${escapeHtml(item)}</div>`).join("")
+    : "";
+  if (sourceSummary) {
+    assumptions.insertAdjacentHTML("beforeend", `<div class="notice">证据来源：${escapeHtml(sourceSummary)}</div>`);
+  }
+}
+
 function renderResult(data) {
   const result = data.result;
   if (!result) {
@@ -371,8 +416,9 @@ async function handleIntake() {
     });
     state.profile = data.profile;
     state.intent = data.intent;
+    state.workOrder = data.work_order;
     renderProfile(data.profile);
-    renderIntent(data.intent);
+    renderWorkOrder(data.work_order);
   } catch (error) {
     intentState.textContent = "失败";
     setWorkflowStage("intent", "需要处理");
@@ -395,6 +441,7 @@ async function handleRun() {
     });
     state.profile = data.profile;
     state.intent = data.intent;
+    state.workOrder = data.work_order || null;
     renderProfile(data.profile);
     renderIntent(data.intent);
     renderResult(data);
@@ -412,6 +459,7 @@ async function applySample(button) {
   datasetPath.value = button.dataset.dataset || datasetPath.value;
   state.profile = null;
   state.intent = null;
+  state.workOrder = null;
   state.result = null;
   state.runId = null;
   state.revision = null;
