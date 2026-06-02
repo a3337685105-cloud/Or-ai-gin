@@ -1,26 +1,58 @@
 # Origin AI Lab
 
-Origin AI Lab is an MVP scaffold for AI-assisted scientific data analysis and Origin/OriginPro figure automation.
+Origin AI Lab is the current working name for a single-entry scientific research
+assistant. The product should not expose separate COMSOL, Origin, reporting,
+animation, or V&V modes to users. The user starts with one front door:
 
-The product direction is deliberately conservative: the AI should plan and explain, while deterministic tools ingest data, run analysis, validate results, and create reproducible artifacts. Origin automation sits behind a dedicated Windows connector so the rest of the system can run and test without a licensed Origin installation.
+```text
+research goal + optional files + desired output
+```
+
+Internally, the assistant preserves thick user context, compresses it into a
+thin `ResearchWorkOrder`, routes to simulation or analysis tools, then returns
+figures, animations, reports, and validation evidence as one reproducible
+result package.
+
+The implementation stays conservative: AI proposes and explains; deterministic
+tools ingest data, run analysis/simulation, validate outputs, and write
+artifact logs. Origin and COMSOL are Windows-local worker capabilities behind
+guarded connectors, so the core test suite still runs without licensed desktop
+software.
 
 ## Current Status
 
-- Feasibility report: `docs/feasibility_report.md`
+- Single assistant direction: `docs/research_assistant_product_design.md`
 - Architecture route: `docs/architecture.md`
-- Research assistant product design: `docs/research_assistant_product_design.md`
-- Research intake case-study findings: `docs/research_intake_case_study_findings.md`
-- Parallel work package: `docs/parallel_work/README.md`
-- Requirement intake design: `docs/requirement_intake_design.md`
 - Design principles: `docs/design_principles.md`
-- AI integration note: `docs/ai_integration.md`
-- Thermal simulation scaffold: `docs/thermal_simulation_design.md`
-- Thermal report capability design: `docs/thermal_report_capability_design.md`
-- Evaluation report: `docs/evaluation_report.md`
+- Feasibility report: `docs/feasibility_report.md`
 - Roadmap: `docs/roadmap.md`
 - MVP acceptance gates: `docs/mvp_acceptance.md`
-- First workflow: CSV profile + XY regression + plot specification, with optional Origin export hook.
-- First web UI: `web/index.html`, served by `src/origin_ai_lab/web_server.py`
+- Research intake case findings: `docs/research_intake_case_study_findings.md`
+- Requirement intake design: `docs/requirement_intake_design.md`
+- AI integration note: `docs/ai_integration.md`
+- Plot modification design: `docs/plot_modification_design.md`
+- Plot accuracy QA: `docs/plot_accuracy_design.md`
+- Visual quality QA: `docs/visual_quality_design.md`
+- Thermal simulation scaffold: `docs/thermal_simulation_design.md`
+- Thermal report/evidence design: `docs/thermal_report_capability_design.md`
+- Evaluation report: `docs/evaluation_report.md`
+- Parallel work package: `docs/parallel_work/README.md`
+- Branch task cards: `docs/parallel_work/BRANCH_TASKS.md`
+- Ready-to-copy branch prompts: `docs/parallel_work/PROMPTS.md`
+- Workflow templates: `docs/workflow/WORK_ORDER.template.md`, `docs/workflow/WORKFLOW_AUDIT.template.md`
+
+## Current Foundation
+
+| Capability | Main code | Test coverage |
+| --- | --- | --- |
+| Thick-to-thin research intake | `src/origin_ai_lab/agents/research_intake_harness.py` | `tests/test_workflow.py` |
+| CSV/profile/plot workflow | `src/origin_ai_lab/workflows/analyze_and_plot.py` | `tests/test_workflow.py` |
+| Plot revisions | `src/origin_ai_lab/workflows/modify_plot.py` | `tests/test_workflow.py` |
+| Origin boundary | `src/origin_ai_lab/connectors/origin_client.py` | Unit tests avoid requiring Origin |
+| COMSOL discovery and batch boundary | `src/origin_ai_lab/connectors/software_discovery.py`, `src/origin_ai_lab/connectors/comsol_client.py` | Mock/dry-run/unit coverage |
+| Thermal simulation scaffold | `src/origin_ai_lab/workflows/thermal_simulation.py` | `tests/test_workflow.py` |
+| Thermal validation harness | `src/origin_ai_lab/simulations/thermal_harness.py` | `tests/test_workflow.py` |
+| Local web server | `src/origin_ai_lab/web_server.py`, `web/` | API helper tests |
 
 ## Easiest Start
 
@@ -54,15 +86,42 @@ No cloud key is required for the rule-based planner. In the web UI, use the "模
 
 ## Developer Commands
 
+These commands are for developers to verify internal capabilities. They are not
+intended to become separate user-facing product modes.
+
 ```powershell
 python -m pip install -e .
-python -m origin_ai_lab intake "帮我画散点图，加线性拟合，导出 png" --dataset examples\sample_xy.csv
+```
+
+Single-entry research intake:
+
+```powershell
+python -m origin_ai_lab.cli research-intake "我想判断5W芯片贴在铝板上会不会超过80度，先给我自己判断方向用"
+python -m origin_ai_lab.cli research-intake --question-bank
+```
+
+Plotting/analysis baseline:
+
+```powershell
+python -m origin_ai_lab.cli intake "帮我画散点图，加线性拟合，导出 png" --dataset examples\sample_xy.csv
 origin-ai analyze examples/sample_xy.csv --out runs/demo --no-origin
+```
+
+Thermal/COMSOL internal capability checks:
+
+```powershell
+origin-ai doctor
 origin-ai thermal --backend mock --out runs/thermal_demo --param chip_power_W=5 --param ambient_temp_C=25 --param h_conv_W_m2K=10
 origin-ai thermal-harness --backend dry-run --case busbar_smoke --case chip_cooling_reference
+```
+
+Evaluation and tests:
+
+```powershell
 python scripts\evaluate_intake_cases.py --planner rule
+python scripts\evaluate_route_cases.py --planner rule
+python scripts\evaluate_modify_cases.py --planner rule
 python scripts\qwen_smoke_test.py --model qwen3.7-max
-$env:PYTHONPATH='src'; python -m origin_ai_lab.web_server
 python -m unittest discover -s tests
 python scripts\check_guardrails.py --policy .codex\harness-policy.json
 ```
@@ -71,6 +130,12 @@ If `origin-ai` is not on `PATH` after editable install, use the module entry poi
 
 ```powershell
 python -m origin_ai_lab.cli analyze examples\sample_xy.csv --out runs/demo --no-origin
+```
+
+Run the local web UI:
+
+```powershell
+$env:PYTHONPATH='src'; python -m origin_ai_lab.web_server
 ```
 
 Then open:
