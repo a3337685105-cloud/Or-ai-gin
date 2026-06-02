@@ -18,6 +18,14 @@ from origin_ai_lab.simulations.thermal import (
     run_mock_thermal_solver,
     validate_thermal_spec,
 )
+from origin_ai_lab.simulations.vv import (
+    build_boundary_condition_audit_from_spec,
+    build_convergence_study_plan,
+    build_credibility_card,
+    build_energy_balance_check,
+    evaluate_energy_balance_check,
+    infer_thermal_evidence_level,
+)
 
 
 def run_thermal_simulation(task: ThermalSimulationTask, output_dir: Path) -> ThermalSimulationResult:
@@ -36,6 +44,9 @@ def run_thermal_simulation(task: ThermalSimulationTask, output_dir: Path) -> The
     plan_path = output_dir / "thermal_execution_plan.json"
     plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
     artifacts["thermal_execution_plan"] = str(plan_path)
+    evidence_level = infer_thermal_evidence_level(spec.source_request)
+    boundary_audit = build_boundary_condition_audit_from_spec(spec)
+    convergence_plan = build_convergence_study_plan(spec, evidence_level=evidence_level)
 
     error_checks_passed = all(check.passed for check in checks if check.severity == "error")
     if error_checks_passed and spec.backend == SimulationBackend.MOCK:
@@ -69,6 +80,13 @@ def run_thermal_simulation(task: ThermalSimulationTask, output_dir: Path) -> The
                     artifacts[f"comsol_{key}"] = value
             status = "comsol-complete"
         except ComsolUnavailable as exc:
+            if exc.details:
+                metrics.update(exc.details)
+                for key in ("batch_log", "status_file"):
+                    value = metrics.get(key)
+                    if isinstance(value, str) and value:
+                        artifacts[f"comsol_{key}"] = value
+                checks.extend(evaluate_thermal_metrics(metrics))
             checks.append(
                 CheckResult(
                     name="comsol_execution_available",
@@ -79,6 +97,33 @@ def run_thermal_simulation(task: ThermalSimulationTask, output_dir: Path) -> The
             status = "blocked"
     else:
         status = "invalid"
+
+    energy_balance = build_energy_balance_check(metrics)
+    checks.append(evaluate_energy_balance_check(energy_balance, evidence_level))
+    boundary_audit_path = output_dir / "boundary_condition_audit.json"
+    boundary_audit_path.write_text(json.dumps(boundary_audit.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+    artifacts["boundary_condition_audit"] = str(boundary_audit_path)
+    energy_balance_path = output_dir / "energy_balance_check.json"
+    energy_balance_path.write_text(json.dumps(energy_balance.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+    artifacts["energy_balance_check"] = str(energy_balance_path)
+    convergence_path = output_dir / "convergence_study_plan.json"
+    convergence_path.write_text(json.dumps(convergence_plan.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+    artifacts["convergence_study_plan"] = str(convergence_path)
+    solver_log_summary = metrics.get("solver_log_summary") or metrics.get("log_summary")
+    credibility_card = build_credibility_card(
+        spec=spec,
+        checks=checks,
+        metrics=metrics,
+        artifacts=artifacts,
+        boundary_audit=boundary_audit,
+        energy_balance=energy_balance,
+        solver_log_summary=solver_log_summary if isinstance(solver_log_summary, dict) else None,
+        convergence_plan=convergence_plan,
+        evidence_level=evidence_level,
+    )
+    credibility_path = output_dir / "credibility_card.json"
+    credibility_path.write_text(json.dumps(credibility_card.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+    artifacts["credibility_card"] = str(credibility_path)
 
     result = ThermalSimulationResult(
         spec=spec,

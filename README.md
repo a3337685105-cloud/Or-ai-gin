@@ -113,6 +113,7 @@ Thermal/COMSOL internal capability checks:
 origin-ai doctor
 origin-ai thermal --backend mock --out runs/thermal_demo --param chip_power_W=5 --param ambient_temp_C=25 --param h_conv_W_m2K=10
 origin-ai thermal-harness --backend dry-run --case busbar_smoke --case chip_cooling_reference
+$env:PYTHONPATH='src'; python -m origin_ai_lab.cli thermal --backend comsol --case busbar_smoke --out runs/thermal_comsol_busbar_vv_src
 ```
 
 Evaluation and tests:
@@ -137,6 +138,10 @@ Run the local web UI:
 ```powershell
 $env:PYTHONPATH='src'; python -m origin_ai_lab.web_server
 ```
+
+Thermal runs write internal V&V artifacts beside `thermal_result.json`: solver-log summary,
+boundary-condition audit, energy-balance check, convergence-study plan, and a credibility card.
+These are evidence-package outputs, not separate user-facing modes.
 
 Then open:
 

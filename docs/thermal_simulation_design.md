@@ -58,6 +58,10 @@ python -m origin_ai_lab.cli thermal-harness --backend dry-run --case busbar_smok
 - `thermal_execution_plan.json`: tool steps and guardrails.
 - `thermal_summary.csv`: mock backend metrics for plotting/reporting.
 - `thermal_result.json`: checks, metrics, artifact paths, and pass/fail status.
+- `boundary_condition_audit.json`: declared heat inputs, sink/reference boundaries, missing fields, and risk notes.
+- `energy_balance_check.json`: heat-input/output terms, residual, tolerance, and availability gaps.
+- `convergence_study_plan.json`: mesh/time-step convergence runner interface and planned refinement points.
+- `credibility_card.json`: input completeness, validation status, required evidence, risks, and gaps.
 - `*_solved.mph`: COMSOL backend solved model output.
 - `*_comsolbatch.log`: COMSOL batch solver log.
 - `comsol_result_manifest.json`: COMSOL solve/export command, log summary, artifact list, export status, and missing evidence.
@@ -146,6 +150,25 @@ Harness validation currently checks:
 
 This gives the LLM a useful modeling surface while keeping the executable boundary inspectable.
 
+## Internal V&V Evidence Package
+
+V&V is an internal capability, not a separate frontend entrance. Existing `thermal` and
+`thermal-harness` runs now write a credibility package beside the simulation artifacts:
+
+- solver-log summary with completion status, warnings/errors, runtime, and any residual/iteration
+  lines that can be parsed from COMSOL logs;
+- boundary-condition audit records for heat inputs, convection/fixed-temperature references,
+  symmetry/insulation assumptions, required fields, and template-audit gaps;
+- energy-balance check structure with input/output terms and residual status, even when a
+  COMSOL backend cannot export those terms yet;
+- mesh/time-step convergence plan with the runner input/output contract. The first version
+  records the interface and planned points; automatic COMSOL reruns are intentionally deferred.
+
+The credibility card automatically raises evidence requirements when the request asks for a
+paper, publication, external claim, validation package, benchmark, or reviewable conclusion.
+Quick screening remains allowed, but the card must label missing evidence instead of implying
+that a mock or smoke result is validated.
+
 ## COMSOL Connection Plan
 
 `ComsolThermalClient` uses COMSOL's documented batch interface for solving:
@@ -222,6 +245,11 @@ paths, and expected qualitative or numeric outcomes.
 | 5 | Localized Heat Source | `Heat_Transfer_Module\Verification_Examples\localized_heat_source.mph` | Heat-source placement and peak-temperature behavior. | Batch run succeeds; later peak temperature appears near the source region. |
 | 6 | Surface-Mount Package | `Heat_Transfer_Module\Power_Electronics_and_Electronic_Cooling\surface_mount_package.mph` | Electronics package heat spreading. | Batch run succeeds; later package temperature and heat-flux metrics are finite and plausible. |
 | 7 | Thermal Contact, Electronic Package, and Heat Sink | `Heat_Transfer_Module\Thermal_Contact_and_Friction\thermal_contact_electronic_package_heat_sink.mph` | Contact-resistance and heat-sink assumptions. | Batch run succeeds; later metrics show a contact-driven temperature drop. |
+
+The code registry stores these as golden cases with `golden_role`, `physics`,
+`verification_targets`, required artifacts, comparator metadata, and risk tags. Some comparators
+are currently `requires_result_export`; those are explicit gaps for the COMSOL result-export
+branch rather than hidden validation claims.
 
 References:
 

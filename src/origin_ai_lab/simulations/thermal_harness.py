@@ -7,6 +7,7 @@ from typing import Any
 from origin_ai_lab.connectors.software_discovery import discover_comsol
 from origin_ai_lab.models import CheckResult, SimulationBackend, ThermalSimulationTask
 from origin_ai_lab.simulations.comsol_cases import COMSOL_THERMAL_CASES
+from origin_ai_lab.simulations.vv import build_boundary_condition_audit_from_proposal
 from origin_ai_lab.workflows.thermal_simulation import run_thermal_simulation
 
 
@@ -269,6 +270,10 @@ def build_official_case_inventory(install_root: Path | None = None) -> list[dict
     return [case.to_dict(root) for case in COMSOL_THERMAL_CASES.values()]
 
 
+def build_golden_case_registry(install_root: Path | None = None) -> list[dict[str, object]]:
+    return build_official_case_inventory(install_root)
+
+
 def run_thermal_harness(
     output_dir: Path,
     backend: SimulationBackend = SimulationBackend.DRY_RUN,
@@ -279,14 +284,17 @@ def run_thermal_harness(
     schema = thermal_model_schema()
     proposal = example_thermal_model_proposal()
     proposal_checks = validate_thermal_model_proposal(proposal)
+    proposal_boundary_audit = build_boundary_condition_audit_from_proposal(proposal)
     install_root = discover_comsol().install_path
-    inventory = build_official_case_inventory(install_root)
+    inventory = build_golden_case_registry(install_root)
     selected_results: list[dict[str, Any]] = []
 
     _write_json(output_dir / "thermal_model_schema.json", schema)
     _write_json(output_dir / "example_model_proposal.json", proposal)
     _write_json(output_dir / "model_proposal_validation.json", _checks_to_dict(proposal_checks))
+    _write_json(output_dir / "model_boundary_condition_audit.json", proposal_boundary_audit.to_dict())
     _write_json(output_dir / "official_case_inventory.json", inventory)
+    _write_json(output_dir / "golden_case_registry.json", inventory)
 
     for case_id in selected_case_ids:
         case = COMSOL_THERMAL_CASES[case_id]
@@ -322,6 +330,10 @@ def run_thermal_harness(
                 "status": result.status,
                 "passed": result.passed,
                 "result_path": result.artifacts.get("thermal_result"),
+                "credibility_card": result.artifacts.get("credibility_card"),
+                "boundary_condition_audit": result.artifacts.get("boundary_condition_audit"),
+                "energy_balance_check": result.artifacts.get("energy_balance_check"),
+                "convergence_study_plan": result.artifacts.get("convergence_study_plan"),
                 "acceptance": list(case.acceptance),
             }
         )
@@ -336,7 +348,9 @@ def run_thermal_harness(
             "thermal_model_schema": str(output_dir / "thermal_model_schema.json"),
             "example_model_proposal": str(output_dir / "example_model_proposal.json"),
             "model_proposal_validation": str(output_dir / "model_proposal_validation.json"),
+            "model_boundary_condition_audit": str(output_dir / "model_boundary_condition_audit.json"),
             "official_case_inventory": str(output_dir / "official_case_inventory.json"),
+            "golden_case_registry": str(output_dir / "golden_case_registry.json"),
         },
     }
     _write_json(output_dir / "thermal_harness_report.json", report)
