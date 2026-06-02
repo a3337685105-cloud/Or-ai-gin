@@ -59,7 +59,11 @@ def run_thermal_simulation(task: ThermalSimulationTask, output_dir: Path) -> The
         try:
             metrics = ComsolThermalClient().run_thermal_study(spec, output_dir)
             checks.extend(evaluate_thermal_metrics(metrics))
-            for key in ("output_mph", "batch_log", "status_file"):
+            metric_artifacts = metrics.get("artifacts") if isinstance(metrics.get("artifacts"), dict) else {}
+            for key, value in metric_artifacts.items():
+                if isinstance(value, str) and value:
+                    artifacts[f"comsol_{key}"] = value
+            for key in ("output_mph", "batch_log", "status_file", "result_manifest"):
                 value = metrics.get(key)
                 if isinstance(value, str) and value:
                     artifacts[f"comsol_{key}"] = value

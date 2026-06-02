@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import json
 import shutil
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -14,6 +17,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from origin_ai_lab.connectors.csv_table import profile_csv
+from origin_ai_lab.connectors.comsol_client import ComsolThermalClient
 from origin_ai_lab.agents.data_router import route_dataset_rule
 from origin_ai_lab.agents.requirement_intake import infer_requirement
 from origin_ai_lab.agents.research_intake_harness import build_research_work_order, intake_question_bank
@@ -24,6 +28,7 @@ from origin_ai_lab.models import (
     PlotKind,
     PlotSpec,
     SimulationBackend,
+    ThermalSimulationSpec,
     TaskType,
     ThermalSimulationTask,
 )
@@ -161,6 +166,71 @@ class WorkflowTests(unittest.TestCase):
         self.assertFalse(result.passed)
         self.assertEqual(result.status, "invalid")
         self.assertFalse(checks["comsol_template_available"].passed)
+
+    def test_comsol_client_writes_controlled_result_manifest(self) -> None:
+        template = self.tmp / "fake_model.mph"
+        template.write_text("fake mph", encoding="utf-8")
+        fake_exe = self.tmp / "comsolbatch.exe"
+        fake_exe.write_text("", encoding="utf-8")
+        spec = ThermalSimulationSpec(
+            source_request="test COMSOL exports",
+            template_id="fake_model",
+            template_path=template,
+            backend=SimulationBackend.COMSOL,
+            study_type="std1",
+            parameters=(),
+        )
+
+        def fake_run(command, check, capture_output, text, timeout):
+            if "-inputfile" not in command:
+                java_path = Path(command[-1])
+                java_path.with_suffix(".class").write_bytes(b"fake class")
+                return subprocess.CompletedProcess(command, 0, "compiled", "")
+            input_path = Path(command[command.index("-inputfile") + 1])
+            output_path = Path(command[command.index("-outputfile") + 1])
+            batch_log = Path(command[command.index("-batchlog") + 1])
+            batch_log.write_text("COMSOL fake run completed\n100%\n", encoding="utf-8")
+            if input_path.suffix.lower() == ".mph":
+                output_path.write_text("solved mph", encoding="utf-8")
+            else:
+                stem = output_path.name.removesuffix("_postprocessed.mph")
+                output_path.write_text("postprocessed mph", encoding="utf-8")
+                png = output_path.parent / f"{stem}_temperature_field.png"
+                table = output_path.parent / f"{stem}_temperature_table.csv"
+                max_csv = output_path.parent / f"{stem}_max_temperature.csv"
+                status = output_path.parent / f"{stem}_export_status.tsv"
+                png.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+                table.write_text("% x,y,z,T (degC)\n0,0,0,42.5\n0,0,1,40.0\n", encoding="utf-8")
+                status.write_text(
+                    "\n".join(
+                        [
+                            "id\tstatus\tpath\tmessage",
+                            f"temperature_field_png\tcreated\t{png}\tpg1",
+                            f"temperature_table_csv\tcreated\t{table}\tdset1",
+                            f"max_temperature_csv\tfailed\t{max_csv}\tOperation_cannot_be_created_in_this_context",
+                        ]
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        with patch("origin_ai_lab.connectors.comsol_client.subprocess.run", side_effect=fake_run):
+            metrics = ComsolThermalClient(executable_path=fake_exe).run_thermal_study(spec, self.tmp)
+
+        manifest_path = self.tmp / "comsol_result_manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(metrics["max_temperature_C"], 42.5)
+        self.assertEqual(manifest["schema_version"], "comsol-result-manifest/v1")
+        self.assertEqual(manifest["status"], "complete")
+        self.assertTrue((self.tmp / "fake_model_solved.mph").exists())
+        self.assertTrue((self.tmp / "fake_model_comsolbatch.log").exists())
+        self.assertTrue((self.tmp / "fake_model_temperature_field.png").exists())
+        self.assertTrue((self.tmp / "fake_model_temperature_table.csv").exists())
+        self.assertTrue((self.tmp / "fake_model_max_temperature.csv").exists())
+        self.assertIn("result_manifest", metrics["artifacts"])
+        self.assertIn("LLM output", " ".join(manifest["guardrails"]))
 
     def test_comsol_case_registry_resolves_relative_path(self) -> None:
         case = get_comsol_case("busbar_smoke")
