@@ -1,54 +1,115 @@
 const state = {
-  profile: null,
-  intent: null,
-  result: null,
-  runId: null,
-  revision: null,
-  manifest: null,
-  plotSpec: null,
+  workOrder: null,
+  questionBank: [],
+  answers: {},
+  activeTab: "summary",
+  error: "",
 };
 
-const PLOT_KIND_OPTIONS = ["auto", "scatter", "line", "bar", "histogram"];
+const SLOT_META = {
+  intended_use: {
+    label: "研究用途",
+    placeholder: "例如：判断方向、设计实验、组会展示、论文插图",
+  },
+  system_description: {
+    label: "研究对象",
+    placeholder: "例如：5W 芯片贴在 50 mm 铝板中心",
+  },
+  geometry: {
+    label: "几何 / 样品",
+    placeholder: "例如：先用简化长方体，或已有 CAD 文件",
+  },
+  materials: {
+    label: "材料参数",
+    placeholder: "例如：铝 6061，导热垫 k=3 W/mK",
+  },
+  heat_sources: {
+    label: "关键输入",
+    placeholder: "例如：芯片总功率 5 W，作用在中心区域",
+  },
+  cooling_boundaries: {
+    label: "边界 / 环境",
+    placeholder: "例如：自然对流，环境 25°C，底面固定温度",
+  },
+  quantities_of_interest: {
+    label: "关注指标",
+    placeholder: "例如：最高温度、热点位置、升温时间",
+  },
+  constraints: {
+    label: "判断标准",
+    placeholder: "例如：最高温度不超过 80°C",
+  },
+  comparison_or_sweep: {
+    label: "比较 / 扫描",
+    placeholder: "例如：功率 1-10 W，风速 0-3 m/s",
+  },
+  validation_data: {
+    label: "验证依据",
+    placeholder: "例如：红外图、历史测试记录、文献 benchmark",
+  },
+  output_format: {
+    label: "期望交付",
+    placeholder: "例如：简短判断、实验方案、图、完整报告",
+  },
+};
 
-const requestText = document.querySelector("#requestText");
-const datasetPath = document.querySelector("#datasetPath");
-const useOrigin = document.querySelector("#useOrigin");
+const JOB_LABELS = {
+  feasibility_screening: "可行性判断",
+  experiment_planning: "实验规划",
+  presentation: "展示材料",
+  paper_evidence: "论文证据",
+  validation_package: "可信证据包",
+  exploratory_analysis: "探索分析",
+};
+
+const EVIDENCE_LABELS = {
+  quick_screening: "快速判断",
+  scoping: "范围界定",
+  decision_support: "决策支持",
+  publication_or_external_claim: "对外结论",
+};
+
+const OUTPUT_LABELS = {
+  short_decision_memo: "简短判断备忘",
+  assumptions: "假设清单",
+  risk_flags: "风险标记",
+  next_experiment_suggestions: "下一步实验建议",
+  experiment_plan: "实验方案",
+  parameter_matrix: "参数矩阵",
+  probe_placement_suggestions: "测点建议",
+  expected_ranges: "预期范围",
+  annotated_figures: "带注释图",
+  temperature_visual_package: "结果图像包",
+  talking_points: "汇报要点",
+  paper_figures: "论文图",
+  methods_text: "方法描述",
+  plot_data_csv: "绘图数据",
+  limitations: "局限性",
+  vv_report: "验证与确认报告",
+  golden_case_comparison: "基准对比",
+  mesh_convergence_plan: "收敛性计划",
+  evidence_manifest: "证据清单",
+  scoping_memo: "范围备忘",
+  candidate_model_paths: "候选工作路径",
+  blocking_questions: "阻塞问题",
+  animation_package: "动态图包",
+};
+
+const goalInput = document.querySelector("#goalInput");
+const contextNotes = document.querySelector("#contextNotes");
+const filePaths = document.querySelector("#filePaths");
 const intakeButton = document.querySelector("#intakeButton");
-const runButton = document.querySelector("#runButton");
-const profileSummary = document.querySelector("#profileSummary");
-const slotGrid = document.querySelector("#slotGrid");
-const questions = document.querySelector("#questions");
-const assumptions = document.querySelector("#assumptions");
-const previewFrame = document.querySelector("#previewFrame");
-const resultSummary = document.querySelector("#resultSummary");
-const artifactList = document.querySelector("#artifactList");
-const dataState = document.querySelector("#dataState");
-const intentState = document.querySelector("#intentState");
-const runState = document.querySelector("#runState");
-const aiMode = document.querySelector("#aiMode");
-const originMode = document.querySelector("#originMode");
-const qwenKeyState = document.querySelector("#qwenKeyState");
-const qwenApiKey = document.querySelector("#qwenApiKey");
-const qwenModel = document.querySelector("#qwenModel");
-const qwenBaseUrl = document.querySelector("#qwenBaseUrl");
-const qwenThinking = document.querySelector("#qwenThinking");
-const saveQwenKeyButton = document.querySelector("#saveQwenKeyButton");
-const deleteQwenKeyButton = document.querySelector("#deleteQwenKeyButton");
-const qwenSettings = document.querySelector(".key-panel");
-const modifyPanel = document.querySelector("#modifyPanel");
-const modifyText = document.querySelector("#modifyText");
-const modifyButton = document.querySelector("#modifyButton");
-const editPlanSummary = document.querySelector("#editPlanSummary");
-const revisionList = document.querySelector("#revisionList");
-const revisionState = document.querySelector("#revisionState");
-const feedbackPanel = document.querySelector("#feedbackPanel");
-const feedbackText = document.querySelector("#feedbackText");
-const correctionText = document.querySelector("#correctionText");
-const feedbackButton = document.querySelector("#feedbackButton");
-const feedbackState = document.querySelector("#feedbackState");
-const workflowState = document.querySelector("#workflowState");
-const flowSteps = Array.from(document.querySelectorAll("[data-step]"));
-const sampleButtons = Array.from(document.querySelectorAll(".sample-chip"));
+const updateSlotsButton = document.querySelector("#updateSlotsButton");
+const clearSlotsButton = document.querySelector("#clearSlotsButton");
+const tabContent = document.querySelector("#tabContent");
+const serviceState = document.querySelector("#serviceState");
+const workbenchState = document.querySelector("#workbenchState");
+const resultState = document.querySelector("#resultState");
+const contextState = document.querySelector("#contextState");
+const readinessBadge = document.querySelector("#readinessBadge");
+const understandingSnapshot = document.querySelector("#understandingSnapshot");
+const slotFields = document.querySelector("#slotFields");
+const tabButtons = Array.from(document.querySelectorAll("[data-tab]"));
 
 async function postJson(url, payload) {
   const response = await fetch(url, {
@@ -66,548 +127,473 @@ async function postJson(url, payload) {
 async function loadStatus() {
   try {
     const response = await fetch("/api/status");
-    const status = await response.json();
-    const qwenSuffix = status.qwen && status.qwen.configured ? ` / ${status.qwen.model}` : "";
-    aiMode.textContent = `AI: ${status.ai_mode}${qwenSuffix}`;
-    originMode.textContent = status.origin_mode && status.origin_mode.includes("optional")
-      ? "Origin: 可选（右侧开启）"
-      : `Origin: ${status.origin_mode}`;
-    renderQwenStatus(status.qwen);
-  } catch (error) {
-    aiMode.textContent = "AI: 服务未连接";
-    originMode.textContent = "Origin: 服务未连接";
-  }
-}
-
-async function saveQwenKey() {
-  setBusy(saveQwenKeyButton, true);
-  try {
-    const status = await postJson("/api/secrets/qwen", {
-      api_key: qwenApiKey.value,
-      model: qwenModel.value,
-      base_url: qwenBaseUrl.value,
-      enable_thinking: qwenThinking.checked,
-    });
-    qwenApiKey.value = "";
-    renderQwenStatus(status);
-    await loadStatus();
-  } catch (error) {
-    qwenKeyState.textContent = error.message;
-  } finally {
-    setBusy(saveQwenKeyButton, false);
-  }
-}
-
-async function deleteQwenKey() {
-  setBusy(deleteQwenKeyButton, true);
-  try {
-    const response = await fetch("/api/secrets/qwen", { method: "DELETE" });
-    const status = await response.json();
     if (!response.ok) {
-      throw new Error(status.error || "删除失败");
+      throw new Error("status unavailable");
     }
-    renderQwenStatus(status);
-    await loadStatus();
+    serviceState.textContent = "理解服务就绪";
   } catch (error) {
-    qwenKeyState.textContent = error.message;
-  } finally {
-    setBusy(deleteQwenKeyButton, false);
+    serviceState.textContent = "服务未连接";
   }
 }
 
-function renderQwenStatus(status) {
-  if (!status) {
-    qwenKeyState.textContent = "未配置";
-    return;
+async function submitResearchIntake(syncSlots = false) {
+  if (syncSlots) {
+    state.answers = collectSlotAnswers();
   }
-  qwenModel.value = status.model || qwenModel.value;
-  qwenBaseUrl.value = status.base_url || qwenBaseUrl.value;
-  qwenThinking.checked = Boolean(status.enable_thinking);
-  qwenKeyState.textContent = status.configured
-    ? `已配置：${status.model}`
-    : "未配置，可用规则模式";
-}
-
-function setBusy(button, busy) {
-  button.disabled = busy;
-}
-
-function renderProfile(profile) {
-  if (!profile) {
-    profileSummary.innerHTML = `<div class="empty">暂无数据概况。</div>`;
-    dataState.textContent = "等待解析";
-    return;
-  }
-  if (!state.intent && !state.result) {
-    setWorkflowStage("data", "数据已读取");
-  }
-  dataState.textContent = `${profile.row_count} 行`;
-  const columns = profile.columns
-    .map((column) => {
-      const type = column.numeric_ratio >= 0.9 ? "数值列" : "文本/分组";
-      return `<div class="column-row"><strong>${escapeHtml(column.name)}</strong><span>${type}</span></div>`;
-    })
-    .join("");
-  profileSummary.innerHTML = `
-    <div class="profile-line"><strong>文件</strong><span>${escapeHtml(profile.path)}</span></div>
-    <div class="profile-line"><strong>行数</strong><span>${profile.row_count}</span></div>
-    <div class="columns">${columns}</div>
-  `;
-}
-
-function renderIntent(intent) {
-  if (!intent) {
-    slotGrid.innerHTML = "";
-    questions.innerHTML = "";
-    assumptions.innerHTML = "";
-    intentState.textContent = "未生成";
+  const goal = goalInput.value.trim();
+  if (!goal) {
+    state.error = "请先填写研究目标。";
+    renderAll();
+    goalInput.focus();
     return;
   }
 
-  intentState.textContent = intent.ready_to_execute ? "可执行" : "需确认";
-  setWorkflowStage(intent.ready_to_execute ? "confirm" : "intent", intent.ready_to_execute ? "等待生成" : "需要确认");
-  const outputFormats = intent.output_formats.length ? intent.output_formats.join(", ") : "png";
-  slotGrid.innerHTML = `
-    <div class="slot readonly-slot"><span>意图</span><strong>${escapeHtml(intent.kind)}</strong></div>
-    <div class="slot readonly-slot"><span>置信度</span><strong>${Math.round(intent.confidence * 100)}%</strong></div>
-    <div class="slot editable-slot">
-      <label for="slotPlotKind">图类型</label>
-      <select id="slotPlotKind">${renderOptions(PLOT_KIND_OPTIONS, intent.plot_kind || "auto")}</select>
-    </div>
-    <div class="slot editable-slot">
-      <label for="slotXColumn">横轴</label>
-      <select id="slotXColumn">${renderColumnOptions(intent.x_column || "", true)}</select>
-    </div>
-    <div class="slot editable-slot">
-      <label for="slotYColumn">纵轴</label>
-      <select id="slotYColumn">${renderColumnOptions(intent.y_column || "", true)}</select>
-    </div>
-    <div class="slot editable-slot">
-      <label for="slotGroupColumn">分组</label>
-      <select id="slotGroupColumn">${renderGroupOptions(intent.group_column || "__none__")}</select>
-    </div>
-    <div class="slot editable-slot">
-      <label for="slotTitle">图标题</label>
-      <input id="slotTitle" placeholder="${escapeAttr(defaultTitle(intent))}" />
-    </div>
-    <div class="slot editable-slot">
-      <label for="slotXTitle">横轴标题</label>
-      <input id="slotXTitle" placeholder="${escapeAttr(intent.x_column || "")}" />
-    </div>
-    <div class="slot editable-slot">
-      <label for="slotYTitle">纵轴标题</label>
-      <input id="slotYTitle" placeholder="${escapeAttr(intent.y_column || "")}" />
-    </div>
-    <label class="slot toggle-slot" for="slotFitEnabled">
-      <input id="slotFitEnabled" type="checkbox" ${defaultFitEnabled(intent) ? "checked" : ""} />
-      线性拟合
-    </label>
-    <div class="slot editable-slot wide-slot">
-      <label for="slotOutputFormats">输出格式</label>
-      <input id="slotOutputFormats" value="${escapeAttr(outputFormats)}" />
-    </div>
-  `;
-
-  questions.innerHTML = intent.clarifying_questions.length
-    ? intent.clarifying_questions
-        .map((question) => {
-          const options = question.options.length ? ` 可选：${question.options.join(" / ")}` : "";
-          return `<div class="notice warning">${escapeHtml(question.question + options)}</div>`;
-        })
-        .join("")
-    : `<div class="notice">没有阻塞问题，可以直接执行。</div>`;
-
-  assumptions.innerHTML = intent.assumptions.length
-    ? intent.assumptions.map((item) => `<div class="notice">${escapeHtml(item)}</div>`).join("")
-    : "";
-}
-
-function renderResult(data) {
-  const result = data.result;
-  if (!result) {
-    renderEditPlan(data.edit_plan);
-    return;
-  }
-  state.result = result;
-  state.runId = data.run_id || state.runId;
-  state.revision = data.revision ?? state.revision;
-  state.manifest = data.manifest || state.manifest;
-  state.plotSpec = data.plot_spec || state.plotSpec;
-  runState.textContent = result.passed ? "检查通过" : "有问题";
-  setWorkflowStage("render", result.passed ? "已生成" : "需处理");
-
-  if (data.artifact_urls && data.artifact_urls.origin_figure) {
-    previewFrame.innerHTML = `<img src="${data.artifact_urls.origin_figure}" alt="Origin 导出的图" />`;
-  } else if (data.points && data.points.length) {
-    previewFrame.innerHTML = renderSvgPlot(data.points, result.regression);
-  } else {
-    previewFrame.innerHTML = `<p>没有可预览的点数据。</p>`;
-  }
-
-  const regression = result.regression;
-  resultSummary.innerHTML = regression
-    ? `
-      <div class="profile-line"><strong>斜率</strong><span>${formatNumber(regression.slope)}</span></div>
-      <div class="profile-line"><strong>截距</strong><span>${formatNumber(regression.intercept)}</span></div>
-      <div class="profile-line"><strong>R2</strong><span>${formatNumber(regression.r_squared)}</span></div>
-      <div class="profile-line"><strong>样本数</strong><span>${regression.n}</span></div>
-    `
-    : `<div class="empty">本次没有回归结果。</div>`;
-
-  const checks = result.checks
-    .map((check) => {
-      const cls = check.passed ? "pass" : "warn";
-      return `<div class="check-line ${cls}"><strong>${check.passed ? "通过" : "注意"}</strong><span>${escapeHtml(check.message)}</span></div>`;
-    })
-    .join("");
-  resultSummary.insertAdjacentHTML("beforeend", checks);
-
-  const artifacts = Object.entries(data.artifact_urls || {})
-    .map(([name, url]) => `<div class="artifact-row"><strong>${escapeHtml(name)}</strong><a href="${url}" target="_blank" rel="noreferrer">打开</a></div>`)
-    .join("");
-  artifactList.innerHTML = artifacts;
-  renderEditPlan(data.edit_plan);
-  renderModifyPanel();
-  renderFeedbackPanel();
-}
-
-function renderEditPlan(editPlan) {
-  if (!editPlan) {
-    editPlanSummary.innerHTML = "";
-    return;
-  }
-  if (!editPlan.ready_to_execute) {
-    const questions = editPlan.clarifying_questions || [];
-    editPlanSummary.innerHTML = questions.length
-      ? questions.map((question) => `<div class="notice warning">${escapeHtml(question.question)}</div>`).join("")
-      : `<div class="notice warning">这个修改请求还需要确认后才能执行。</div>`;
-    return;
-  }
-  const operations = editPlan.operations || [];
-  editPlanSummary.innerHTML = operations.length
-    ? operations
-        .map((operation) => {
-          const props = Object.entries(operation.properties || {})
-            .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : value}`)
-            .join(" / ");
-          return `<div class="edit-operation"><strong>${escapeHtml(operation.op)}</strong><span>${escapeHtml(props || operation.target || "")}</span></div>`;
-        })
-        .join("")
-    : "";
-}
-
-function renderModifyPanel() {
-  if (!state.runId || state.revision === null || state.revision === undefined) {
-    modifyPanel.hidden = true;
-    return;
-  }
-  modifyPanel.hidden = false;
-  revisionState.textContent = `Revision ${state.revision}`;
-  const revisions = (state.manifest && state.manifest.revisions) || [];
-  revisionList.innerHTML = revisions.length
-    ? revisions
-        .map((revision) => {
-          const selected = Number(revision.revision) === Number(state.revision);
-          return `
-            <div class="revision-row">
-              <strong>Rev ${revision.revision}${selected ? " 当前" : ""}</strong>
-              <span>${escapeHtml(revision.request || "")}</span>
-              <button class="secondary" type="button" data-revision="${revision.revision}">查看</button>
-            </div>
-          `;
-        })
-        .join("")
-    : "";
-}
-
-function renderFeedbackPanel() {
-  if (!state.runId) {
-    feedbackPanel.hidden = true;
-    return;
-  }
-  feedbackPanel.hidden = false;
-}
-
-function renderSvgPlot(points, regression) {
-  const width = 680;
-  const height = 300;
-  const pad = 42;
-  const xs = points.map((point) => point[0]);
-  const ys = points.map((point) => point[1]);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const scaleX = (value) => pad + ((value - minX) / Math.max(maxX - minX, 1)) * (width - pad * 2);
-  const scaleY = (value) => height - pad - ((value - minY) / Math.max(maxY - minY, 1)) * (height - pad * 2);
-  const dots = points
-    .map((point) => `<circle cx="${scaleX(point[0])}" cy="${scaleY(point[1])}" r="4.5" />`)
-    .join("");
-  const fitLine = regression
-    ? `<line x1="${scaleX(minX)}" y1="${scaleY(regression.slope * minX + regression.intercept)}" x2="${scaleX(maxX)}" y2="${scaleY(regression.slope * maxX + regression.intercept)}" />`
-    : "";
-  return `
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="数据预览图">
-      <rect x="0" y="0" width="${width}" height="${height}" fill="#fff" />
-      <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" stroke="#9aa8a0" />
-      <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" stroke="#9aa8a0" />
-      <g fill="#19755f">${dots}</g>
-      <g stroke="#a35d22" stroke-width="2.2">${fitLine}</g>
-      <text x="${pad}" y="24" fill="#1f2522" font-size="14" font-weight="700">Preview</text>
-      <text x="${width - pad}" y="${height - 12}" fill="#63706a" font-size="12" text-anchor="end">X</text>
-      <text x="18" y="${pad}" fill="#63706a" font-size="12">Y</text>
-    </svg>
-  `;
-}
-
-async function handleIntake() {
   setBusy(intakeButton, true);
-  intentState.textContent = "解析中";
-  setWorkflowStage("intent", "理解中");
+  setBusy(updateSlotsButton, true);
+  state.error = "";
+  setWorkbenchState("理解中", "working");
+  resultState.textContent = "整理工作单中";
   try {
-    const data = await postJson("/api/intake", {
-      request: requestText.value,
-      dataset: datasetPath.value,
+    const data = await postJson("/api/research-intake", {
+      goal,
+      context: contextNotes.value.trim(),
+      files: parseFiles(filePaths.value),
+      answers: state.answers,
     });
-    state.profile = data.profile;
-    state.intent = data.intent;
-    renderProfile(data.profile);
-    renderIntent(data.intent);
+    state.workOrder = data.work_order;
+    state.questionBank = data.question_bank || [];
+    renderAll();
   } catch (error) {
-    intentState.textContent = "失败";
-    setWorkflowStage("intent", "需要处理");
-    questions.innerHTML = `<div class="notice warning">${escapeHtml(error.message)}</div>`;
+    state.error = error.message;
+    renderAll();
   } finally {
     setBusy(intakeButton, false);
+    setBusy(updateSlotsButton, false);
   }
 }
 
-async function handleRun() {
-  setBusy(runButton, true);
-  runState.textContent = "执行中";
-  setWorkflowStage("render", "生成中");
-  try {
-    const data = await postJson("/api/analyze", {
-      request: requestText.value,
-      dataset: datasetPath.value,
-      use_origin: useOrigin.checked,
-      overrides: collectPlotOverrides(),
-    });
-    state.profile = data.profile;
-    state.intent = data.intent;
-    renderProfile(data.profile);
-    renderIntent(data.intent);
-    renderResult(data);
-  } catch (error) {
-    runState.textContent = "失败";
-    setWorkflowStage("confirm", "需要处理");
-    previewFrame.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
-  } finally {
-    setBusy(runButton, false);
+function renderAll() {
+  renderStatus();
+  renderSnapshot();
+  renderSlots();
+  renderTabs();
+  renderContextState();
+}
+
+function renderStatus() {
+  const workOrder = state.workOrder;
+  if (state.error) {
+    setWorkbenchState("需要处理", "warning");
+    resultState.textContent = "发生错误";
+    readinessBadge.textContent = "错误";
+    readinessBadge.className = "warning";
+    return;
+  }
+  if (!workOrder) {
+    setWorkbenchState("等待目标", "");
+    resultState.textContent = "尚未生成工作单";
+    readinessBadge.textContent = "待理解";
+    readinessBadge.className = "";
+    return;
+  }
+  if (workOrder.ready_to_plan) {
+    setWorkbenchState("可进入计划", "ready");
+    resultState.textContent = "工作单已生成";
+    readinessBadge.textContent = "信息可用";
+    readinessBadge.className = "ready";
+  } else {
+    setWorkbenchState("缺少关键信息", "warning");
+    resultState.textContent = "需要补充信息";
+    readinessBadge.textContent = "需补充";
+    readinessBadge.className = "warning";
   }
 }
 
-async function applySample(button) {
-  requestText.value = button.dataset.request || requestText.value;
-  datasetPath.value = button.dataset.dataset || datasetPath.value;
-  state.profile = null;
-  state.intent = null;
-  state.result = null;
-  state.runId = null;
-  state.revision = null;
-  state.manifest = null;
-  state.plotSpec = null;
-  runState.textContent = "未执行";
-  resultSummary.innerHTML = "";
-  artifactList.innerHTML = "";
-  modifyPanel.hidden = true;
-  feedbackPanel.hidden = true;
-  previewFrame.innerHTML = `
-    <div class="empty-preview">
-      <strong>样例已载入</strong>
-      <span>确认槽位后生成图与报告。</span>
+function setWorkbenchState(text, tone) {
+  workbenchState.textContent = text;
+  workbenchState.className = `state-pill ${tone || ""}`.trim();
+}
+
+function renderContextState() {
+  const fileCount = parseFiles(filePaths.value).length;
+  const hasContext = Boolean(contextNotes.value.trim());
+  if (!fileCount && !hasContext) {
+    contextState.textContent = "可选";
+  } else if (fileCount && hasContext) {
+    contextState.textContent = `${fileCount} 个文件线索`;
+  } else if (fileCount) {
+    contextState.textContent = `${fileCount} 个文件线索`;
+  } else {
+    contextState.textContent = "已有上下文";
+  }
+}
+
+function renderSnapshot() {
+  const workOrder = state.workOrder;
+  if (!workOrder) {
+    understandingSnapshot.innerHTML = `
+      <div class="empty-state">
+        <strong>等待研究目标</strong>
+        <span>生成后会显示系统理解、证据强度和最小可行动工作单。</span>
+      </div>
+    `;
+    return;
+  }
+  const core = workOrder.core_thread || {};
+  understandingSnapshot.innerHTML = `
+    <div class="snapshot-grid">
+      ${snapshotItem("用途", humanJob(workOrder.user_job))}
+      ${snapshotItem("证据", humanEvidence(workOrder.evidence_level))}
+      ${snapshotItem("对象", core.primary_system || workOrder.raw_goal)}
+      ${snapshotItem("指标", humanValue(core.primary_qoi))}
+      ${snapshotItem("标准", humanValue(core.decision_criterion))}
     </div>
   `;
-  setWorkflowStage("intent", "样例已载入");
-  await handleIntake();
 }
 
-function setWorkflowStage(stage, label) {
-  const order = ["data", "intent", "confirm", "render"];
-  const currentIndex = Math.max(order.indexOf(stage), 0);
-  flowSteps.forEach((item) => {
-    const index = order.indexOf(item.dataset.step);
-    item.classList.toggle("is-done", index >= 0 && index < currentIndex);
-    item.classList.toggle("is-current", index === currentIndex);
+function snapshotItem(label, value) {
+  return `
+    <div class="snapshot-item">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value || "待确认")}</strong>
+    </div>
+  `;
+}
+
+function renderSlots() {
+  const workOrder = state.workOrder;
+  if (!workOrder) {
+    slotFields.innerHTML = `
+      <div class="slot-empty">
+        <strong>核心槽位会在理解后出现</strong>
+        <span>这里只保留当前任务最相关的字段。</span>
+      </div>
+    `;
+    updateSlotsButton.disabled = true;
+    clearSlotsButton.disabled = true;
+    return;
+  }
+  updateSlotsButton.disabled = false;
+  clearSlotsButton.disabled = false;
+  const fields = relevantSlotFields(workOrder);
+  slotFields.innerHTML = fields
+    .map((field) => {
+      const meta = SLOT_META[field];
+      const value = fieldValue(field, workOrder);
+      const isMissing = (workOrder.missing_blockers || []).includes(field);
+      return `
+        <label class="slot-field ${isMissing ? "is-missing" : ""}" for="slot-${escapeAttr(field)}">
+          <span>${escapeHtml(meta.label)}${isMissing ? " · 缺失" : ""}</span>
+          <textarea id="slot-${escapeAttr(field)}" data-slot-field="${escapeAttr(field)}" rows="2" placeholder="${escapeAttr(meta.placeholder)}">${escapeHtml(value)}</textarea>
+        </label>
+      `;
+    })
+    .join("");
+}
+
+function relevantSlotFields(workOrder) {
+  const questionFields = (workOrder.next_questions || []).map((question) => question.field);
+  const missingFields = workOrder.missing_blockers || [];
+  const thick = workOrder.thick_context || {};
+  const domainFields = thick.domain === "thermal_simulation"
+    ? ["geometry", "heat_sources", "cooling_boundaries"]
+    : [];
+  const baseFields = ["system_description", "intended_use", "quantities_of_interest", "constraints", "output_format"];
+  const candidateFields = unique([...missingFields, ...questionFields, ...domainFields, ...baseFields]);
+  return candidateFields.filter((field) => SLOT_META[field]).slice(0, 7);
+}
+
+function fieldValue(field, workOrder) {
+  if (Object.prototype.hasOwnProperty.call(state.answers, field)) {
+    return state.answers[field];
+  }
+  const thick = workOrder.thick_context || {};
+  const value = thick[field];
+  if (Array.isArray(value)) {
+    return value.join(", ");
+  }
+  return value || "";
+}
+
+function collectSlotAnswers() {
+  const answers = {};
+  document.querySelectorAll("[data-slot-field]").forEach((input) => {
+    const field = input.dataset.slotField;
+    const value = input.value.trim();
+    if (field && value) {
+      answers[field] = value;
+    }
   });
-  if (workflowState) {
-    workflowState.textContent = label;
-  }
+  return answers;
 }
 
-async function handleModify() {
-  if (!state.runId) {
-    editPlanSummary.innerHTML = `<div class="notice warning">请先生成一张图，再继续修改。</div>`;
+function renderTabs() {
+  tabButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.tab === state.activeTab);
+  });
+  if (state.error) {
+    tabContent.innerHTML = `
+      <section class="summary-section warning-section">
+        <h3>错误</h3>
+        <p>${escapeHtml(state.error)}</p>
+      </section>
+    `;
     return;
   }
-  const request = modifyText.value.trim();
-  if (!request) {
-    editPlanSummary.innerHTML = `<div class="notice warning">请输入修改要求。</div>`;
-    return;
-  }
-  setBusy(modifyButton, true);
-  revisionState.textContent = "修改中";
-  try {
-    const data = await postJson("/api/modify", {
-      run_id: state.runId,
-      revision: state.revision,
-      request,
-      use_origin: useOrigin.checked,
-    });
-    if (data.result) {
-      modifyText.value = "";
-      renderResult(data);
-    } else {
-      state.manifest = data.manifest || state.manifest;
-      state.plotSpec = data.plot_spec || state.plotSpec;
-      renderEditPlan(data.edit_plan);
-      renderModifyPanel();
-    }
-  } catch (error) {
-    editPlanSummary.innerHTML = `<div class="notice warning">${escapeHtml(error.message)}</div>`;
-  } finally {
-    setBusy(modifyButton, false);
-  }
+  const renderer = {
+    summary: renderSummaryTab,
+    model: renderModelTab,
+    results: renderResultsTab,
+    figures: renderFiguresTab,
+    validation: renderValidationTab,
+    files: renderFilesTab,
+  }[state.activeTab];
+  tabContent.innerHTML = renderer ? renderer() : renderSummaryTab();
 }
 
-async function handleFeedback() {
-  if (!state.runId) {
-    feedbackState.innerHTML = `<div class="notice warning">请先生成一张图，再保存反馈。</div>`;
-    return;
+function renderSummaryTab() {
+  const workOrder = state.workOrder;
+  if (!workOrder) {
+    return `
+      <section class="summary-section empty-section">
+        <h3>等待输入</h3>
+        <p>提交研究目标后，这里会按 thick-to-thin 结构显示用户目标、系统理解、假设、缺失信息和下一步计划。</p>
+      </section>
+    `;
   }
-  const feedback = feedbackText.value.trim();
-  const correction = correctionText.value.trim();
-  if (!feedback && !correction) {
-    feedbackState.innerHTML = `<div class="notice warning">请至少写下问题或正确修改方向。</div>`;
-    return;
-  }
-  setBusy(feedbackButton, true);
-  try {
-    await postJson("/api/feedback", {
-      run_id: state.runId,
-      revision: state.revision,
-      request: requestText.value,
-      feedback,
-      correction,
-      plot_spec: state.plotSpec,
-      artifact_urls: state.result ? state.result.artifacts : {},
-    });
-    feedbackText.value = "";
-    correctionText.value = "";
-    feedbackState.innerHTML = `<div class="notice">已保存为后续评测样本。</div>`;
-  } catch (error) {
-    feedbackState.innerHTML = `<div class="notice warning">${escapeHtml(error.message)}</div>`;
-  } finally {
-    setBusy(feedbackButton, false);
-  }
+  const core = workOrder.core_thread || {};
+  const understanding = [
+    ["研究用途", humanJob(workOrder.user_job)],
+    ["证据强度", humanEvidence(workOrder.evidence_level)],
+    ["主要对象", core.primary_system || workOrder.raw_goal],
+    ["关注指标", humanValue(core.primary_qoi)],
+    ["判断标准", humanValue(core.decision_criterion)],
+  ];
+  const missing = missingItems(workOrder);
+  return `
+    ${sectionBlock("用户目标", `<p class="goal-copy">${escapeHtml(workOrder.raw_goal)}</p>`)}
+    ${sectionBlock("系统理解", keyValueList(understanding))}
+    ${sectionBlock("假设", listBlock(workOrder.assumptions || [], "暂无默认假设。"))}
+    ${sectionBlock("缺失信息", listBlock(missing, "暂无阻塞缺口。"))}
+    ${sectionBlock("下一步计划", outputList(workOrder.planned_outputs || []))}
+  `;
 }
 
-async function loadRevision(revision) {
-  if (!state.runId) {
-    return;
+function renderModelTab() {
+  const workOrder = state.workOrder;
+  if (!workOrder) {
+    return placeholderSection("模型区域", "理解完成后会保留系统、几何、参数、边界和后续模型产物。");
   }
-  try {
-    const response = await fetch(`/api/revision?run_id=${encodeURIComponent(state.runId)}&revision=${encodeURIComponent(revision)}`);
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || "加载 revision 失败");
-    }
-    renderResult(data);
-  } catch (error) {
-    editPlanSummary.innerHTML = `<div class="notice warning">${escapeHtml(error.message)}</div>`;
+  const thick = workOrder.thick_context || {};
+  const rows = [
+    ["研究对象", thick.system_description || (workOrder.core_thread || {}).primary_system],
+    ["几何 / 样品", thick.geometry],
+    ["材料参数", thick.materials],
+    ["关键输入", thick.heat_sources],
+    ["边界 / 环境", thick.cooling_boundaries],
+    ["比较 / 扫描", thick.comparison_or_sweep],
+  ];
+  return `
+    ${sectionBlock("当前模型线索", keyValueList(rows, "待补充"))}
+    ${sectionBlock("后续模型产物", futureGrid(["参数表", "模型草案", "计算任务", "执行日志"]))}
+  `;
+}
+
+function renderResultsTab() {
+  const workOrder = state.workOrder;
+  if (!workOrder) {
+    return placeholderSection("结果区域", "这里会承接后续计算、分析、拟合和实验对比的摘要。");
   }
+  const status = workOrder.ready_to_plan ? "已具备进入计划的最小信息" : "仍有阻塞信息需要补齐";
+  return `
+    ${sectionBlock("当前状态", `<p>${escapeHtml(status)}</p>`)}
+    ${sectionBlock("预期结果", outputCards(workOrder.planned_outputs || []))}
+  `;
 }
 
-function formatNumber(value) {
-  return Number(value).toPrecision(6);
+function renderFiguresTab() {
+  return `
+    <section class="figure-stage">
+      <div>
+        <h3>图像结果区</h3>
+        <p>后续生成的图、截图、动画帧和可导出图件会汇总在这里。</p>
+      </div>
+      <div class="figure-placeholder">
+        <span>Figures</span>
+      </div>
+    </section>
+  `;
 }
 
-function collectPlotOverrides() {
-  const plotKind = document.querySelector("#slotPlotKind");
-  if (!plotKind) {
-    return {};
+function renderValidationTab() {
+  const workOrder = state.workOrder;
+  if (!workOrder) {
+    return placeholderSection("验证区域", "这里会保留数值检查、对照数据、假设风险和验证证据。");
   }
-  return {
-    plot_kind: valueOf("#slotPlotKind"),
-    x_column: valueOf("#slotXColumn"),
-    y_column: valueOf("#slotYColumn"),
-    group_column: valueOf("#slotGroupColumn"),
-    title: valueOf("#slotTitle"),
-    x_title: valueOf("#slotXTitle"),
-    y_title: valueOf("#slotYTitle"),
-    fit_enabled: Boolean(document.querySelector("#slotFitEnabled")?.checked),
-    output_formats: splitFormats(valueOf("#slotOutputFormats")),
-  };
+  const thick = workOrder.thick_context || {};
+  const validationRows = [
+    ["验证依据", thick.validation_data],
+    ["判断标准", thick.constraints || (workOrder.core_thread || {}).decision_criterion],
+    ["缺失阻塞", (workOrder.missing_blockers || []).map(humanField).join(", ")],
+  ];
+  return `
+    ${sectionBlock("验证线索", keyValueList(validationRows, "待补充"))}
+    ${sectionBlock("假设风险", listBlock(workOrder.assumptions || [], "暂无假设风险。"))}
+  `;
 }
 
-function valueOf(selector) {
-  return document.querySelector(selector)?.value || "";
+function renderFilesTab() {
+  const files = parseFiles(filePaths.value);
+  const context = contextNotes.value.trim();
+  const workOrder = state.workOrder;
+  const extra = workOrder && workOrder.thick_context ? workOrder.thick_context.extra_user_context || {} : {};
+  const extraRows = Object.entries(extra)
+    .filter(([key]) => !["files", "additional_context"].includes(key))
+    .map(([key, value]) => [humanField(key), Array.isArray(value) ? value.join(", ") : value]);
+  return `
+    ${sectionBlock("文件线索", files.length ? fileList(files) : `<p class="muted-copy">暂无文件线索。</p>`)}
+    ${sectionBlock("上下文摘录", context ? `<p>${escapeHtml(context)}</p>` : `<p class="muted-copy">暂无补充上下文。</p>`)}
+    ${extraRows.length ? sectionBlock("额外上下文", keyValueList(extraRows)) : ""}
+    ${sectionBlock("后续文件区域", futureGrid(["输入清单", "结果文件", "图件导出", "审计记录"]))}
+  `;
 }
 
-function splitFormats(value) {
+function sectionBlock(title, innerHtml) {
+  return `
+    <section class="summary-section">
+      <h3>${escapeHtml(title)}</h3>
+      ${innerHtml}
+    </section>
+  `;
+}
+
+function placeholderSection(title, text) {
+  return `
+    <section class="summary-section empty-section">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(text)}</p>
+    </section>
+  `;
+}
+
+function keyValueList(rows, emptyValue = "待确认") {
+  const content = rows
+    .filter(([label]) => label)
+    .map(([label, value]) => `
+      <div class="kv-row">
+        <strong>${escapeHtml(label)}</strong>
+        <span>${escapeHtml(humanValue(value) || emptyValue)}</span>
+      </div>
+    `)
+    .join("");
+  return `<div class="kv-list">${content}</div>`;
+}
+
+function listBlock(items, emptyText) {
+  const normalized = (items || []).filter(Boolean);
+  if (!normalized.length) {
+    return `<p class="muted-copy">${escapeHtml(emptyText)}</p>`;
+  }
+  return `
+    <ul class="clean-list">
+      ${normalized.map((item) => `<li>${escapeHtml(humanValue(item))}</li>`).join("")}
+    </ul>
+  `;
+}
+
+function outputList(outputs) {
+  const items = (outputs || []).map(humanOutput);
+  return listBlock(items, "下一步计划会在理解后生成。");
+}
+
+function outputCards(outputs) {
+  const items = (outputs || []).map(humanOutput);
+  if (!items.length) {
+    return `<p class="muted-copy">暂无预期结果。</p>`;
+  }
+  return `
+    <div class="output-grid">
+      ${items.map((item) => `<div class="output-card">${escapeHtml(item)}</div>`).join("")}
+    </div>
+  `;
+}
+
+function futureGrid(items) {
+  return `
+    <div class="future-grid">
+      ${items.map((item) => `<div class="future-cell">${escapeHtml(item)}</div>`).join("")}
+    </div>
+  `;
+}
+
+function fileList(files) {
+  return `
+    <div class="file-list">
+      ${files.map((file) => `<div class="file-row"><span>${escapeHtml(file)}</span></div>`).join("")}
+    </div>
+  `;
+}
+
+function missingItems(workOrder) {
+  const missing = (workOrder.missing_blockers || []).map((field) => `${humanField(field)}：待补充`);
+  const questions = (workOrder.next_questions || []).map((question) => {
+    const options = question.options && question.options.length ? `（${question.options.map(humanValue).join(" / ")}）` : "";
+    return `${humanField(question.field)}：${question.question}${options}`;
+  });
+  return unique([...missing, ...questions]);
+}
+
+function parseFiles(value) {
   return value
-    .split(/[,\s;]+/)
-    .map((item) => item.trim().toLowerCase())
+    .replaceAll(";", "\n")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
     .filter(Boolean);
 }
 
-function renderOptions(options, selected) {
-  return options
-    .map((option) => `<option value="${escapeAttr(option)}" ${option === selected ? "selected" : ""}>${escapeHtml(option)}</option>`)
-    .join("");
+function humanField(field) {
+  return SLOT_META[field] ? SLOT_META[field].label : String(field).replaceAll("_", " ");
 }
 
-function renderColumnOptions(selected, numericOnly) {
-  const columns = (state.profile && state.profile.columns) || [];
-  const usable = numericOnly ? columns.filter((column) => column.numeric_ratio >= 0.9) : columns;
-  const options = [`<option value="">待确认</option>`].concat(
-    usable.map((column) => {
-      const name = column.name;
-      return `<option value="${escapeAttr(name)}" ${name === selected ? "selected" : ""}>${escapeHtml(name)}</option>`;
-    })
-  );
-  return options.join("");
+function humanJob(value) {
+  return JOB_LABELS[value] || humanValue(value);
 }
 
-function renderGroupOptions(selected) {
-  const columns = (state.profile && state.profile.columns) || [];
-  const options = [`<option value="__none__" ${selected === "__none__" ? "selected" : ""}>无</option>`].concat(
-    columns.map((column) => {
-      const name = column.name;
-      return `<option value="${escapeAttr(name)}" ${name === selected ? "selected" : ""}>${escapeHtml(name)}</option>`;
-    })
-  );
-  return options.join("");
+function humanEvidence(value) {
+  return EVIDENCE_LABELS[value] || humanValue(value);
 }
 
-function defaultTitle(intent) {
-  if (intent.y_column && intent.x_column) {
-    return `${intent.y_column} vs ${intent.x_column}`;
+function humanOutput(value) {
+  return OUTPUT_LABELS[value] || humanValue(value);
+}
+
+function humanValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return "";
   }
-  return "";
+  if (Array.isArray(value)) {
+    return value.map(humanValue).filter(Boolean).join(", ");
+  }
+  const text = String(value);
+  const known = OUTPUT_LABELS[text] || JOB_LABELS[text] || EVIDENCE_LABELS[text];
+  return known || text.replaceAll("_", " ");
 }
 
-function defaultFitEnabled(intent) {
-  const text = requestText.value.toLowerCase();
-  const negative = ["不要拟合", "不需要拟合", "去掉拟合", "删除拟合", "不用拟合", "no fit", "without fit"];
-  if (negative.some((item) => text.includes(item))) {
-    return false;
-  }
-  const positive = ["线性拟合", "加拟合", "拟合线", "回归", "fit", "regression", "trend line"];
-  if (positive.some((item) => text.includes(item))) {
+function unique(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    if (!item || seen.has(item)) {
+      return false;
+    }
+    seen.add(item);
     return true;
+  });
+}
+
+function setBusy(button, busy) {
+  if (button) {
+    button.disabled = busy;
   }
-  return intent && intent.plot_kind === "scatter" && text.includes("散点");
 }
 
 function escapeHtml(value) {
@@ -623,23 +609,33 @@ function escapeAttr(value) {
   return escapeHtml(value);
 }
 
-intakeButton.addEventListener("click", handleIntake);
-runButton.addEventListener("click", handleRun);
-sampleButtons.forEach((button) => {
+intakeButton.addEventListener("click", () => submitResearchIntake(false));
+updateSlotsButton.addEventListener("click", () => submitResearchIntake(true));
+clearSlotsButton.addEventListener("click", () => {
+  state.answers = {};
+  renderSlots();
+});
+
+tabButtons.forEach((button) => {
   button.addEventListener("click", () => {
-    applySample(button);
+    state.activeTab = button.dataset.tab || "summary";
+    renderTabs();
   });
 });
-requestText.addEventListener("input", () => setWorkflowStage("data", "已编辑"));
-datasetPath.addEventListener("input", () => setWorkflowStage("data", "已编辑"));
-saveQwenKeyButton.addEventListener("click", saveQwenKey);
-deleteQwenKeyButton.addEventListener("click", deleteQwenKey);
-modifyButton.addEventListener("click", handleModify);
-feedbackButton.addEventListener("click", handleFeedback);
-revisionList.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-revision]");
-  if (button) {
-    loadRevision(button.dataset.revision);
-  }
+
+[goalInput, contextNotes, filePaths].forEach((input) => {
+  input.addEventListener("input", () => {
+    if (input === filePaths || input === contextNotes) {
+      renderContextState();
+      if (state.activeTab === "files") {
+        renderTabs();
+      }
+    }
+    if (input === goalInput && goalInput.value.trim()) {
+      setWorkbenchState("已编辑", "");
+    }
+  });
 });
+
 loadStatus();
+renderAll();

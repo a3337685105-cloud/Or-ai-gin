@@ -301,6 +301,28 @@ class WorkflowTests(unittest.TestCase):
         self.assertFalse(overrides["fit_enabled"])
         self.assertEqual(overrides["output_formats"], ("svg", "pdf"))
 
+    def test_web_research_intake_returns_work_order_payload(self) -> None:
+        payload = OriginAIWebHandler._research_intake_payload(
+            None,
+            {
+                "goal": "判断 5W 芯片贴在铝板上是否会超过 80 度",
+                "context": "自然对流，环境温度 25 C。",
+                "files": "examples/sample_xy.csv\nnotes/design.md",
+                "answers": {
+                    "system_description": "5W chip on aluminum plate",
+                    "geometry": "simplified block model",
+                    "heat_sources": "chip total power 5 W",
+                },
+            },
+        )
+
+        work_order = payload["work_order"]
+        self.assertEqual(work_order["schema_version"], "research-work-order/v1")
+        self.assertEqual(work_order["thick_context"]["domain"], "thermal_simulation")
+        self.assertEqual(work_order["thick_context"]["extra_user_context"]["files"], ["examples/sample_xy.csv", "notes/design.md"])
+        self.assertIn("heat_sources", work_order["thick_context"])
+        self.assertTrue(payload["question_bank"])
+
     def test_web_feedback_record_requires_actionable_text(self) -> None:
         record = OriginAIWebHandler._feedback_record(
             None,

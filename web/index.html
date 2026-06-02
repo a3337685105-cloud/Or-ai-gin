@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Origin AI Lab</title>
+    <title>科研助手工作台</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/styles.css" />
   </head>
@@ -11,182 +11,90 @@
     <main class="app-shell">
       <header class="topbar">
         <div class="brand">
-          <h1>Origin AI Lab</h1>
-          <p>科研数据进来，Origin 图和可复现检查出去。</p>
+          <h1>科研助手工作台</h1>
+          <p>从一个研究目标开始，沉淀上下文、假设、缺口和下一步工作单。</p>
         </div>
-        <div class="runtime" aria-label="运行状态">
-          <span id="aiMode">AI: 检测中</span>
-          <span id="originMode">Origin: 检测中</span>
+        <div class="runtime" aria-live="polite">
+          <span id="serviceState">服务检测中</span>
         </div>
       </header>
 
-      <div class="app-grid">
-        <section class="main-column" aria-label="主工作区">
-          <section class="command-panel" aria-labelledby="commandTitle">
-            <div class="flow-steps" aria-label="工作流进度">
-              <span class="flow-step is-current" data-step="data">1 数据</span>
-              <span class="flow-step" data-step="intent">2 理解</span>
-              <span class="flow-step" data-step="confirm">3 确认</span>
-              <span class="flow-step" data-step="render">4 出图</span>
+      <section class="goal-panel" aria-labelledby="goalTitle">
+        <div class="goal-heading">
+          <div>
+            <h2 id="goalTitle">研究目标</h2>
+            <p>把要判断、要分析或要产出的科研问题写在这里。</p>
+          </div>
+          <span id="workbenchState" class="state-pill">等待目标</span>
+        </div>
+        <div class="goal-entry">
+          <label for="goalInput" class="sr-only">研究目标</label>
+          <textarea id="goalInput" rows="3" placeholder="例如：判断 5W 芯片贴在铝板上是否会超过 80°C，并给出下一步实验建议。"></textarea>
+          <button id="intakeButton" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 5h10M4 12h8M4 19h6" />
+              <path d="m15 17 2 2 5-6" />
+            </svg>
+            开始理解
+          </button>
+        </div>
+      </section>
+
+      <div class="workbench-grid">
+        <section class="workspace-column" aria-label="上下文和结果">
+          <section class="panel context-panel" aria-labelledby="contextTitle">
+            <div class="panel-heading">
+              <h2 id="contextTitle">上下文 / 文件</h2>
+              <span id="contextState">可选</span>
             </div>
-            <div class="section-heading">
-              <div>
-                <h2 id="commandTitle">绘图需求</h2>
-                <p>选择样例或输入自己的数据路径与绘图要求。</p>
-              </div>
-              <span class="workflow-badge" id="workflowState">准备就绪</span>
-            </div>
-            <div class="sample-strip" aria-label="样例任务">
-              <button class="sample-chip" type="button" data-dataset="examples/sample_xy.csv" data-request="帮我画 time_s 和 signal_v 的散点图，加线性拟合，导出 png">散点拟合</button>
-              <button class="sample-chip" type="button" data-dataset="examples/materials_xrd_export.csv" data-request="生成 XRD 图谱，横轴 two_theta_deg，纵轴 intensity_counts，导出 png">XRD 图谱</button>
-              <button class="sample-chip" type="button" data-dataset="examples/materials_raman_export.txt" data-request="把 Raman_shift_cm-1 作为横轴，Intensity_a.u. 作为纵轴画拉曼光谱曲线，导出 svg">Raman 曲线</button>
-              <button class="sample-chip" type="button" data-dataset="examples/materials_eis_export.csv" data-request="画 z_real_ohm 和 z_imag_neg_ohm 的 Nyquist 散点图，导出 png">Nyquist</button>
-            </div>
-            <div class="run-fields">
-              <label class="path-field" for="datasetPath">
-                数据文件
-                <input id="datasetPath" value="examples/sample_xy.csv" />
+            <div class="context-grid">
+              <label for="contextNotes">
+                上下文
+                <textarea id="contextNotes" rows="5" placeholder="补充样品、实验条件、材料参数、约束、已有结论或需要避开的假设。"></textarea>
               </label>
-              <label class="toggle-field origin-toggle" for="useOrigin">
-                <input id="useOrigin" type="checkbox" />
-                调用 Origin
+              <label for="filePaths">
+                文件线索
+                <textarea id="filePaths" rows="5" placeholder="每行一个路径或文件名：数据表、图片、CAD、笔记、文献摘录等。"></textarea>
               </label>
-            </div>
-            <label for="requestText">你想让 AI 画什么？</label>
-            <textarea id="requestText" rows="4">帮我画散点图，加线性拟合，导出 png</textarea>
-            <div class="primary-actions">
-              <button id="intakeButton" class="secondary" type="button">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7" /><path d="M16 14l2 2 4-5" /></svg>
-                理解并填槽
-              </button>
-              <button id="runButton" type="button">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
-                生成图与报告
-              </button>
             </div>
           </section>
 
-          <section class="panel result-panel" aria-label="执行结果">
-            <div class="panel-heading">
-              <h2>结果预览</h2>
-              <span id="runState">未执行</span>
+          <section class="panel result-panel" aria-labelledby="resultTitle">
+            <div class="panel-heading result-heading">
+              <h2 id="resultTitle">结果</h2>
+              <span id="resultState">尚未生成工作单</span>
             </div>
-            <div class="preview-frame" id="previewFrame">
-              <div class="empty-preview">
-                <strong>等待生成</strong>
-                <span>先用样例跑通，再换成自己的文件。</span>
-              </div>
-            </div>
-            <div id="resultSummary" class="result-summary"></div>
-            <div id="artifactList" class="artifact-list"></div>
-            <section id="feedbackPanel" class="feedback-panel" hidden>
-              <div class="modify-heading">
-                <div>
-                  <h3>结果反馈</h3>
-                  <p>如果这张图不对，把问题和正确方向记下来，系统会保留成后续评测样本。</p>
-                </div>
-              </div>
-              <label for="feedbackText">哪里不对</label>
-              <textarea id="feedbackText" rows="2" placeholder="例如：横轴标题应该是 Time / s，不应该显示列名。"></textarea>
-              <label for="correctionText">应该怎么改</label>
-              <textarea id="correctionText" rows="2" placeholder="例如：把横轴标题改成 Time / s，保留 SVG 导出。"></textarea>
-              <div class="modify-actions">
-                <button id="feedbackButton" class="secondary" type="button">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" /></svg>
-                  保存反馈
-                </button>
-              </div>
-              <div id="feedbackState" class="edit-plan-summary"></div>
-            </section>
-            <section id="modifyPanel" class="modify-panel" hidden>
-              <div class="modify-heading">
-                <div>
-                  <h3>继续修改</h3>
-                  <p>看到结果后，直接说要改哪里。</p>
-                </div>
-                <span id="revisionState">Revision 0</span>
-              </div>
-              <label for="modifyText">修改要求</label>
-              <textarea id="modifyText" rows="2" placeholder="例如：把点改成红色，去掉拟合线，导出 svg"></textarea>
-              <div class="modify-actions">
-                <button id="modifyButton" type="button">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                  应用修改
-                </button>
-              </div>
-              <div id="editPlanSummary" class="edit-plan-summary"></div>
-              <div id="revisionList" class="revision-list"></div>
-            </section>
+            <nav class="tabs" aria-label="结果视图">
+              <button class="tab is-active" type="button" data-tab="summary">Summary</button>
+              <button class="tab" type="button" data-tab="model">Model</button>
+              <button class="tab" type="button" data-tab="results">Results</button>
+              <button class="tab" type="button" data-tab="figures">Figures</button>
+              <button class="tab" type="button" data-tab="validation">Validation</button>
+              <button class="tab" type="button" data-tab="files">Files</button>
+            </nav>
+            <div id="tabContent" class="tab-content" aria-live="polite"></div>
           </section>
         </section>
 
-        <aside class="inspector-column" aria-label="检查面板">
-          <section class="panel intent-panel" aria-label="AI 理解">
+        <aside class="inspector-column" aria-label="AI 理解">
+          <section class="panel understanding-panel" aria-labelledby="understandingTitle">
             <div class="panel-heading">
-              <h2>AI 理解</h2>
-              <span id="intentState">未生成</span>
+              <h2 id="understandingTitle">AI 理解卡</h2>
+              <span id="readinessBadge">待理解</span>
             </div>
-            <div class="slot-grid" id="slotGrid"></div>
-            <div id="questions" class="questions"></div>
-            <div id="assumptions" class="assumptions"></div>
+            <div id="understandingSnapshot" class="understanding-snapshot"></div>
+            <div id="slotFields" class="slot-fields"></div>
+            <div class="slot-actions">
+              <button id="updateSlotsButton" type="button" class="secondary">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 12a9 9 0 1 1-2.6-6.4" />
+                  <path d="M21 3v6h-6" />
+                </svg>
+                更新理解
+              </button>
+              <button id="clearSlotsButton" type="button" class="ghost">清空槽位</button>
+            </div>
           </section>
-
-          <section class="panel data-panel" aria-label="数据概况">
-            <div class="panel-heading">
-              <h2>数据概况</h2>
-              <span id="dataState">等待解析</span>
-            </div>
-            <div id="profileSummary" class="empty">先点击“理解需求”。</div>
-          </section>
-        </aside>
-
-        <aside class="utility-rail" aria-label="设置与上下文">
-          <section class="rail-card context-card">
-            <div class="rail-heading">
-              <h2>本机启动</h2>
-            </div>
-            <code>.\scripts\setup_windows.ps1</code>
-            <code>.\scripts\start_web.ps1</code>
-          </section>
-
-          <details class="rail-card key-panel">
-            <summary>
-              <span>
-                <strong>模型与密钥</strong>
-                <small id="qwenKeyState">检测中</small>
-              </span>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4" /></svg>
-            </summary>
-            <div class="key-fields">
-              <label for="qwenApiKey">
-                DashScope API Key
-                <input id="qwenApiKey" type="password" placeholder="sk-..." autocomplete="off" />
-              </label>
-              <label for="qwenModel">
-                模型
-                <input id="qwenModel" value="qwen3.7-max" />
-              </label>
-              <label for="qwenBaseUrl">
-                Base URL
-                <input id="qwenBaseUrl" value="https://dashscope.aliyuncs.com/compatible-mode/v1" />
-              </label>
-              <label class="toggle-field key-toggle" for="qwenThinking">
-                <input id="qwenThinking" type="checkbox" checked />
-                enable_thinking
-              </label>
-              <div class="settings-actions">
-                <button id="saveQwenKeyButton" type="button">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8M7 3v5h8" /></svg>
-                  保存
-                </button>
-                <button id="deleteQwenKeyButton" class="danger" type="button">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
-                  删除
-                </button>
-              </div>
-              <p class="key-note">Key 使用 Windows DPAPI 加密保存到本机用户目录，页面不会回显明文。</p>
-            </div>
-          </details>
         </aside>
       </div>
     </main>
