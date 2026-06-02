@@ -1,4 +1,4 @@
-# Ready-To-Copy Prompts
+﻿# Ready-To-Copy Prompts
 
 Use one prompt per new Codex conversation. Start each conversation in the matching branch or
 worktree folder.
