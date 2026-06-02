@@ -45,6 +45,11 @@ from origin_ai_lab.simulations.thermal_harness import (
     run_thermal_harness,
     validate_thermal_model_proposal,
 )
+from origin_ai_lab.visualization.thermal import (
+    DEFAULT_THERMAL_VIEW_IDS,
+    evaluate_animation_artifact_quality,
+    evaluate_visual_image_artifact_quality,
+)
 from origin_ai_lab.web_server import OriginAIWebHandler
 from origin_ai_lab.workflows.analyze_and_plot import run_analysis
 from origin_ai_lab.workflows.modify_plot import create_initial_plot_revision, modify_plot_revision
@@ -151,7 +156,35 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue((self.tmp / "thermal_simulation_spec.json").exists())
         self.assertTrue((self.tmp / "thermal_execution_plan.json").exists())
         self.assertTrue((self.tmp / "thermal_summary.csv").exists())
+        self.assertTrue((self.tmp / "thermal_visualization_spec.json").exists())
+        self.assertTrue((self.tmp / "thermal_visualization_manifest.json").exists())
+        self.assertTrue((self.tmp / "thermal_visualization_quality.json").exists())
         self.assertTrue((self.tmp / "thermal_result.json").exists())
+
+    def test_thermal_visualization_manifest_declares_default_package(self) -> None:
+        task = ThermalSimulationTask(
+            goal="steady-state chip thermal visual evidence package",
+            backend=SimulationBackend.MOCK,
+            parameters={
+                "chip_power_W": 5.0,
+                "ambient_temp_C": 25.0,
+                "h_conv_W_m2K": 25.0,
+            },
+        )
+
+        result = run_thermal_simulation(task, self.tmp)
+        manifest_path = Path(result.artifacts["thermal_visualization_manifest"])
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        entries = {entry["view_id"]: entry for entry in manifest["entries"]}
+
+        self.assertEqual(tuple(entries), DEFAULT_THERMAL_VIEW_IDS)
+        self.assertEqual(entries["temperature_overview"]["renderer"], "comsol_export_or_python_pyvista")
+        self.assertEqual(entries["heat_flux_view"]["renderer"], "comsol_export_or_python_pyvista_or_paraview")
+        self.assertEqual(entries["probe_path_curves"]["renderer"], "origin")
+        self.assertEqual(entries["parameter_comparison"]["renderer"], "origin")
+        self.assertEqual(entries["animation_manifest"]["artifact_format"], "json")
+        self.assertIn("nonempty_image", {rule["id"] for rule in manifest["quality_rules"]})
+        self.assertTrue(result.passed)
 
     def test_run_thermal_simulation_comsol_requires_template(self) -> None:
         task = ThermalSimulationTask(
@@ -450,6 +483,49 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue(by_name["visual_nonblank"].passed)
         self.assertTrue(by_name["visual_content_visible"].passed)
         self.assertTrue(report["passed"])
+
+    def test_thermal_visual_image_quality_accepts_nonblank_metadata(self) -> None:
+        checks = evaluate_visual_image_artifact_quality(
+            {
+                "view_id": "temperature_overview",
+                "output_kind": "image",
+                "status": "exported",
+                "placeholder": False,
+                "artifact": {
+                    "status": "exported",
+                    "placeholder": False,
+                    "file_size_bytes": 4096,
+                    "image_metrics": {
+                        "unique_colors": 32,
+                        "non_background_ratio": 0.125,
+                    },
+                },
+            }
+        )
+
+        self.assertTrue(checks[0].passed)
+
+    def test_thermal_animation_quality_rejects_incomplete_exported_frames(self) -> None:
+        checks = evaluate_animation_artifact_quality(
+            {
+                "view_id": "animation_manifest",
+                "output_kind": "animation_manifest",
+                "status": "exported",
+                "placeholder": False,
+                "color_scale_policy": "fixed_camera_and_global_temperature_scale",
+                "expected_frames": 3,
+                "frame_labels": ["time=0s", "time=1s"],
+                "frames": [
+                    {"path": "frame_000.png", "label": "time=0s"},
+                    {"path": "frame_001.png", "label": "time=1s"},
+                ],
+            }
+        )
+        by_name = {check.name: check for check in checks}
+
+        self.assertFalse(by_name["thermal_animation_frames_complete:animation_manifest"].passed)
+        self.assertFalse(by_name["thermal_animation_frame_labels:animation_manifest"].passed)
+        self.assertEqual(by_name["thermal_animation_frames_complete:animation_manifest"].severity, "error")
 
     def test_plot_accuracy_detects_axes_fit_and_material_peaks(self) -> None:
         profile = profile_csv(ROOT / "examples" / "materials_xrd_export.csv")

@@ -115,6 +115,11 @@ Current implementation status:
 - Generate default thermal visualization set: overview, slices, isotherms, heat flux, probes, parameter comparisons.
 - Support animation manifest: frame count, fps, color-scale policy, time/parameter labels, output formats.
 - Add visual QA checks: colorbar/unit presence, frame completeness, nonblank images, consistent scale.
+- Current scaffold writes `thermal_visualization_spec.json`, `thermal_visualization_manifest.json`, and `thermal_visualization_quality.json`
+  from the thermal workflow. The manifest is a planned evidence package until COMSOL/Python/Origin exporters attach real images,
+  curves, frame sequences, and image metrics.
+- `thermal-visualization-spec/v1` keeps 3D field views on COMSOL/Python/PyVista/ParaView paths while reserving Origin for
+  probe/path curves, parameter sweeps, and experiment comparisons.
 
 ### Level 4: V&V Harness
 

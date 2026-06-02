@@ -26,6 +26,12 @@ from origin_ai_lab.simulations.vv import (
     evaluate_energy_balance_check,
     infer_thermal_evidence_level,
 )
+from origin_ai_lab.visualization.thermal import (
+    build_default_thermal_visualization_spec,
+    build_thermal_visualization_manifest,
+    evaluate_visualization_manifest_quality,
+    evaluate_visualization_spec,
+)
 
 
 def run_thermal_simulation(task: ThermalSimulationTask, output_dir: Path) -> ThermalSimulationResult:
@@ -124,6 +130,38 @@ def run_thermal_simulation(task: ThermalSimulationTask, output_dir: Path) -> The
     credibility_path = output_dir / "credibility_card.json"
     credibility_path.write_text(json.dumps(credibility_card.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
     artifacts["credibility_card"] = str(credibility_path)
+
+    visualization_spec = build_default_thermal_visualization_spec(spec, dict(metrics))
+    visualization_spec_path = output_dir / "thermal_visualization_spec.json"
+    visualization_spec_path.write_text(
+        json.dumps(visualization_spec.to_dict(), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    artifacts["thermal_visualization_spec"] = str(visualization_spec_path)
+
+    visualization_manifest = build_thermal_visualization_manifest(visualization_spec, output_dir)
+    visualization_manifest_path = output_dir / "thermal_visualization_manifest.json"
+    visualization_manifest_path.write_text(
+        json.dumps(visualization_manifest, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    artifacts["thermal_visualization_manifest"] = str(visualization_manifest_path)
+
+    visualization_checks = evaluate_visualization_spec(visualization_spec)
+    visualization_checks.extend(evaluate_visualization_manifest_quality(visualization_manifest))
+    checks.extend(visualization_checks)
+    visualization_quality_report = {
+        "schema_version": "thermal-visualization-quality/v1",
+        "manifest_path": str(visualization_manifest_path),
+        "checks": [check.to_dict() for check in visualization_checks],
+        "passed": all(check.passed for check in visualization_checks if check.severity == "error"),
+    }
+    visualization_quality_path = output_dir / "thermal_visualization_quality.json"
+    visualization_quality_path.write_text(
+        json.dumps(visualization_quality_report, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    artifacts["thermal_visualization_quality"] = str(visualization_quality_path)
 
     result = ThermalSimulationResult(
         spec=spec,

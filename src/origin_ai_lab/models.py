@@ -238,6 +238,84 @@ class ThermalSimulationSpec:
 
 
 @dataclass(frozen=True)
+class VisualizationViewSpec:
+    view_id: str
+    title: str
+    role: str
+    output_kind: str
+    renderer: str
+    view_type: str
+    quantity: str
+    unit: str | None = None
+    artifact_format: str = "png"
+    artifact_path: str | None = None
+    status: str = "planned"
+    placeholder: bool = True
+    colorbar_required: bool = True
+    color_scale_policy: str = "global_temperature"
+    state_label: str = "stationary/base_case"
+    required_annotations: tuple[str, ...] = ()
+    linked_metrics: tuple[str, ...] = ()
+    linked_data: tuple[str, ...] = ()
+    expected_frames: int | None = None
+    frame_rate_fps: float | None = None
+    frame_labels: tuple[str, ...] = ()
+    frames: tuple[dict[str, Any], ...] = ()
+    notes: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "view_id": self.view_id,
+            "title": self.title,
+            "role": self.role,
+            "output_kind": self.output_kind,
+            "renderer": self.renderer,
+            "view_type": self.view_type,
+            "quantity": self.quantity,
+            "unit": self.unit,
+            "artifact_format": self.artifact_format,
+            "artifact_path": self.artifact_path,
+            "status": self.status,
+            "placeholder": self.placeholder,
+            "colorbar_required": self.colorbar_required,
+            "color_scale_policy": self.color_scale_policy,
+            "state_label": self.state_label,
+            "required_annotations": list(self.required_annotations),
+            "linked_metrics": list(self.linked_metrics),
+            "linked_data": list(self.linked_data),
+            "expected_frames": self.expected_frames,
+            "frame_rate_fps": self.frame_rate_fps,
+            "frame_labels": list(self.frame_labels),
+            "frames": [dict(frame) for frame in self.frames],
+            "notes": list(self.notes),
+        }
+
+
+@dataclass(frozen=True)
+class VisualizationSpec:
+    source_request: str
+    case_id: str
+    study_type: str
+    views: tuple[VisualizationViewSpec, ...]
+    render_policy: dict[str, Any] = field(default_factory=dict)
+    global_color_scale: dict[str, Any] = field(default_factory=dict)
+    source_work_order: dict[str, Any] = field(default_factory=dict)
+    schema_version: str = "thermal-visualization-spec/v1"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "source_request": self.source_request,
+            "case_id": self.case_id,
+            "study_type": self.study_type,
+            "render_policy": self.render_policy,
+            "global_color_scale": self.global_color_scale,
+            "source_work_order": self.source_work_order,
+            "views": [view.to_dict() for view in self.views],
+        }
+
+
+@dataclass(frozen=True)
 class PlotSpec:
     dataset_path: Path
     plot_kind: PlotKind
